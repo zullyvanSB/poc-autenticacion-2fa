@@ -196,6 +196,36 @@ def get_cors_allowed_origins(env: Mapping[str, str] | None = None) -> list[str]:
     return []
 
 
+def get_corporate_allowed_domains(env: Mapping[str, str] | None = None) -> list[str]:
+    """Devuelve la allowlist de dominios corporativos permitidos para el camino B.
+
+    Lee la variable opcional ``CORPORATE_ALLOWED_DOMAINS`` (lista separada por
+    comas) de las variables de entorno, recorta cada entrada, descarta las vacias
+    y normaliza cada dominio a minusculas (los dominios son case-insensitive, a
+    diferencia de los origenes CORS). Es fail-safe: si la variable esta ausente o
+    queda vacia tras el filtrado devuelve una **lista vacia** en cualquier entorno
+    (incluido local), de modo que sin configuracion explicita no se autorice
+    ningun dominio corporativo (R9.3). No hay dominios hardcodeados como default.
+
+    El getter solo *provee* la lista normalizada; la semantica de autorizacion es
+    de **match exacto** de dominio (sin sufijos ni subdominios) y la aplica el
+    consumidor (validacion server-side de POCA-004): un subdominio como
+    ``mail.segurosbolivar.com`` NO coincide con ``segurosbolivar.com`` salvo que se
+    configure explicitamente. Los dominios no son secretos; el getter no registra
+    valores (leakage prevention).
+
+    Esta variable es opcional y NO forma parte de ``REQUIRED_ENV_VARS``: una
+    variable requerida abortaria el arranque, contrario al comportamiento
+    fail-safe esperado.
+
+    :param env: mapeo de variables de entorno; por defecto ``os.environ``.
+    :return: lista de dominios corporativos normalizados (posiblemente vacia).
+    """
+    source: Mapping[str, str] = os.environ if env is None else env
+    raw = source.get("CORPORATE_ALLOWED_DOMAINS", "")
+    return [entry.strip().lower() for entry in raw.split(",") if entry.strip()]
+
+
 def get_session_cookie_secure(env: Mapping[str, str] | None = None) -> bool:
     """Devuelve el atributo ``Secure`` de la session cookie segun el entorno.
 
