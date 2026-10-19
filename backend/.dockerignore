@@ -1,0 +1,40 @@
+# Mantiene el contexto de build minimo y evita que secretos o archivos de
+# entorno entren a la imagen (R9.3). Alineado con backend/.gitignore.
+
+# Secretos y configuracion (NUNCA en la imagen) ------------------------------
+.env
+.env.*
+*serviceAccount*.json
+*credentials*.json
+*.pem
+*.key
+
+# Entornos virtuales y artefactos de build ----------------------------------
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+
+# Caches de Python -----------------------------------------------------------
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Pruebas y herramientas (no necesarias en runtime) --------------------------
+tests/
+postmanCollections/
+
+# IDE y VCS ------------------------------------------------------------------
+.idea/
+.vscode/
+.git/
+.gitignore
+
+# Docs y metadatos no requeridos en runtime ----------------------------------
+README.md
+CHANGELOG.md
+Dockerfile
+.dockerignore

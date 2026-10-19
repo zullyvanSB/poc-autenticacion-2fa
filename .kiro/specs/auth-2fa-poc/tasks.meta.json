@@ -1,0 +1,637 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Inicializar el proyecto del Backend_FastAPI con Poetry": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500943710
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500959689
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791501469035
+      }
+    ],
+    "1.2 Definir los modelos Pydantic v2 (DTO) del backend": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500944119
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791501474421
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791501860773
+      }
+    ],
+    "1.3 Inicializar el proyecto del Frontend_Angular": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500944750
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500961081
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791501469373
+      }
+    ],
+    "1.4 Inicializar el proyecto de la CLI_Gestion": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500944870
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500961845
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791501470001
+      }
+    ],
+    "2.1 Implementar `CorrelationIdMiddleware`": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500945027
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791501475870
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791501862332
+      }
+    ],
+    "2.3 Implementar el logger estructurado con enmascarado de PII": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500945139
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791501477308
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791501858974
+      }
+    ],
+    "2.5 Implementar `ErrorHandler` global": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500945322
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791501881250
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791502328643
+      }
+    ],
+    "2.6 Implementar `StartupValidator` de variables de entorno": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500945453
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791501478211
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791501857483
+      }
+    ],
+    "3.1 Implementar la función pura `classify_route(identifier)`": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500945570
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791501879676
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791502324804
+      }
+    ],
+    "3.3 Implementar el handler de `POST /api/v1/auth/route`": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500945710
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791502359519
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791502661241
+      }
+    ],
+    "4. Checkpoint — Verificar enrutamiento y transversales": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500945793
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791502681442
+      }
+    ],
+    "5.1 Implementar el validador de esquema de URL de proveedores": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500945886
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791501877209
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791502327665
+      }
+    ],
+    "5.3 Implementar el cliente HTTP saliente con propagación de Correlation-ID y timeout": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500945954
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791501874585
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791502326419
+      }
+    ],
+    "6.1 Implementar la verificación del ID token y la derivación de tipo de usuario": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500946024
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791502686480
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791503148331
+      }
+    ],
+    "6.2 Implementar el handler de `POST /api/v1/auth/session` con creación de session cookie": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500946122
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791503164589
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791503717126
+      }
+    ],
+    "7.1 Implementar la validación de sesión y el armado de la respuesta del dashboard": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500946193
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791503730446
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791504167257
+      }
+    ],
+    "8.1 Implementar el handler de logout idempotente": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500946273
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791503731687
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791504165851
+      }
+    ],
+    "8.3 Implementar el refuerzo de rate limiting en los endpoints del backend": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500946343
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791504175297
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791504758220
+      }
+    ],
+    "9. Checkpoint — Verificar backend completo": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500946434
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791504946559
+      }
+    ],
+    "10.1 Implementar `AuthService` (orquestación del Client SDK y backend)": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500946513
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791503167090
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791503719238
+      }
+    ],
+    "10.3 Implementar `LoginComponent` (identifier-first)": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500946594
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791503733020
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791504164398
+      }
+    ],
+    "10.5 Implementar `TwoFactorComponent` (prompt TOTP)": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500946678
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791503734335
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791504163067
+      }
+    ],
+    "11.1 Implementar `AuthGuard`": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500946772
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791503735260
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791504168043
+      }
+    ],
+    "11.2 Implementar `DashboardComponent`": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500946866
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791504174330
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791504758577
+      }
+    ],
+    "12. Checkpoint — Verificar frontend completo": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500946938
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791504948025
+      }
+    ],
+    "13.1 Implementar la carga de credenciales y la validación estricta de parámetros": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500947019
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791501872634
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791502329740
+      }
+    ],
+    "13.3 Implementar el comando `crear_usuario`": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500947147
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791502687833
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791503150452
+      }
+    ],
+    "13.4 Implementar los comandos `actualizar_usuario` y `eliminar_usuario`": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500947227
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791503166267
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791503718209
+      }
+    ],
+    "15.1 Crear la imagen Docker única del Backend_FastAPI": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500947306
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791502688837
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791503149574
+      }
+    ],
+    "15.2 Configurar el despliegue del frontend y la resolución de URL por entorno": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500947388
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791502690230
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791503146685
+      }
+    ],
+    "16.1 Redactar la Guía Operativa paso a paso": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500947489
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791502691257
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791503152141
+      }
+    ],
+    "17.1 Cablear los componentes y actualizar el CHANGELOG": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500947589
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791504766068
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791504945261
+      }
+    ],
+    "18. Checkpoint final — Verificar todo": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791500947687
+      },
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791504948760
+      }
+    ],
+    "1. Preparar el esqueleto del proyecto (backend, frontend, CLI)": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791501860981
+      }
+    ],
+    "5. Implementar la validación de transporte HTTPS y el cliente saliente": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791502327787
+      }
+    ],
+    "2. Implementar el middleware transversal y la validación de arranque del backend": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791502328724
+      }
+    ],
+    "3. Implementar la decisión de enrutamiento (`POST /api/v1/auth/route`)": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791502661339
+      }
+    ],
+    "15. Dockerización y configuración de despliegue": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791503149716
+      }
+    ],
+    "16. Elaborar la Guía Operativa (R8) — entregable documental": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791503152282
+      }
+    ],
+    "6. Implementar la creación de sesión (`POST /api/v1/auth/session`)": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791503717217
+      }
+    ],
+    "13. Implementar la CLI_Gestion (administración de usuarios Cliente)": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791503718324
+      }
+    ],
+    "10. Implementar el Frontend_Angular (ingreso identifier-first y 2FA)": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791504164585
+      }
+    ],
+    "7. Implementar el recurso protegido (`GET /api/v1/dashboard`)": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791504167345
+      }
+    ],
+    "8. Implementar el cierre de sesión (`POST /api/v1/auth/logout`)": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791504758321
+      }
+    ],
+    "11. Implementar el dashboard del frontend y la protección de ruta": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791504758670
+      }
+    ],
+    "17. Integración final y actualización del CHANGELOG": [
+      {
+        "executionId": "dd8e8e77-201b-4dc5-aa27-754b2855cbfb",
+        "chatSessionId": "sess_07d663dd-e7e4-493d-99ad-d63b16e34cfc",
+        "timestamp": 1791504945388
+      }
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+# Registro institucional JFrog Artifactory — todas las dependencias se resuelven aquí.
+# La URL del registro se inyecta por entorno (CI/local), nunca se embebe un valor estático.
+# Configure JFROG_NPM_REGISTRY y JFROG_NPM_AUTH_TOKEN en el entorno antes de instalar.
+registry=${JFROG_NPM_REGISTRY}
+//${JFROG_NPM_REGISTRY_HOST}/:_authToken=${JFROG_NPM_AUTH_TOKEN}
+
+# Seguridad de cadena de suministro: versiones exactas, sin rangos.
+save-exact=true
+save-prefix=
+# Auditar e impedir instalaciones fuera de política.
+engine-strict=true
+fund=false
+audit=true

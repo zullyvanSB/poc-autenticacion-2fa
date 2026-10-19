@@ -1,0 +1,29 @@
+# IDE
+.idea
+.vscode
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+dist/
+build/
+*.egg-info/
+
+# Entornos virtuales
+.venv/
+venv/
+
+# Variables de entorno
+.env
+.env.*
+
+# Credenciales de Firebase / cuentas de servicio — NUNCA versionar (R7.8)
+*.json
+!pyproject-example.json
+service-account*.json
+credentials*.json
+firebase-credentials*.json
+google-application-credentials*.json
+secrets/
+credentials/

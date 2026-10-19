@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>PoC Autenticacion 2FA</title>
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <!--
+      La configuracion de runtime (incluida la URL del backend por entorno) la
+      inyecta el hosting mediante window.__APP_CONFIG__ (R9.6, R9.7). No se
+      embebe ninguna URL por defecto en el codigo fuente.
+
+      config.js es un script EXTERNO del mismo origen (permitido por la CSP
+      `script-src 'self'`, que bloquea scripts inline). El hosting sustituye su
+      contenido por entorno en el despliegue (ver src/config.template.js y el
+      README). Se carga antes del bundle para que __APP_CONFIG__ exista cuando
+      arranca Angular.
+    -->
+    <script src="/config.js"></script>
+  </head>
+  <body>
+    <app-root></app-root>
+  </body>
+</html>

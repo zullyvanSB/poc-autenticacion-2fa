@@ -1,0 +1,41 @@
+# === Raíz del monorepo PoC Autenticación 2FA ===
+# Cada subproyecto (backend, cli, frontend) tiene su propio .gitignore;
+# este cubre lo transversal y lo pesado/sensible a nivel global.
+
+# IDEs
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Entornos virtuales (incluye la .venv de la raíz)
+.venv/
+venv/
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+
+# Cobertura y build
+coverage/
+build/
+
+# Variables de entorno y secretos — NUNCA versionar
+.env
+.env.*
+*serviceAccount*.json
+*credentials*.json
+service-account*.json
+firebase-credentials*.json
+google-application-credentials*.json
+*.pem
+*.key
+secrets/
+credentials/

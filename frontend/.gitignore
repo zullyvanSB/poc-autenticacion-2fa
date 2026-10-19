@@ -1,0 +1,17 @@
+# IDEs
+.idea
+.vscode
+
+# Dependencias
+node_modules
+
+# Artefactos de build
+dist
+
+# Angular / herramientas
+.angular/cache
+coverage
+
+# Entorno y credenciales (nunca en control de versiones)
+.env
+.env.*

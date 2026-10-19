@@ -1,0 +1,26 @@
+# IDEs
+.idea
+.vscode
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+
+# Entornos virtuales
+.venv/
+venv/
+
+# Configuracion y secretos (nunca en control de versiones)
+.env
+.env.*
+# Credenciales de la cuenta de servicio del Firebase Admin SDK
+*serviceAccount*.json
+*credentials*.json
+*.pem
+*.key

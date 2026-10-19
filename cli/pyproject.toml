@@ -1,0 +1,40 @@
+[tool.poetry]
+name = "cli-gestion"
+version = "0.1.0"
+description = "CLI_Gestion — scripts de administración de usuarios Cliente en Firebase para la PoC de autenticación 2FA"
+authors = ["Equipo PoC Autenticacion 2FA"]
+readme = "README.md"
+packages = [{ include = "cli", from = "src" }]
+
+# Repositorio institucional JFrog como única fuente de dependencias.
+# El operador debe configurar las credenciales de JFrog en ~/.config/pypoetry/auth.toml
+# o mediante variables de entorno; nunca se incrustan en este archivo.
+[[tool.poetry.source]]
+name = "jfrog"
+url = "https://jfrog.segurosbolivar.com/artifactory/api/pypi/pypi-remote/simple"
+priority = "primary"
+
+[tool.poetry.dependencies]
+python = ">=3.12,<4.0"
+# Versiones fijadas de forma exacta (sin ^, ~, *, latest) — alineado con el diseño (firebase-admin 6.x).
+firebase-admin = "6.5.0"
+pydantic = "2.9.2"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "8.3.3"
+hypothesis = "6.112.1"
+
+[tool.poetry.scripts]
+crear_usuario = "cli.main:crear_usuario_entrypoint"
+actualizar_usuario = "cli.main:actualizar_usuario_entrypoint"
+eliminar_usuario = "cli.main:eliminar_usuario_entrypoint"
+
+[tool.pytest.ini_options]
+# El paquete 'cli' vive bajo src/ (layout src). Se agrega al pythonpath para que
+# las pruebas lo importen sin requerir una instalación editable.
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["poetry-core>=1.9.0"]
+build-backend = "poetry.core.masonry.api"

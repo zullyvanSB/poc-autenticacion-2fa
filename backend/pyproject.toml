@@ -1,0 +1,39 @@
+[tool.poetry]
+name = "auth-2fa-poc-backend"
+version = "0.1.0"
+description = "Backend_FastAPI de la PoC de autenticacion y 2FA (TOTP) identifier-first"
+authors = ["Seguros Bolivar"]
+readme = "README.md"
+packages = [{ include = "auth", from = "src" }, { include = "dashboard", from = "src" }, { include = "common", from = "src" }]
+
+# Dependencias resueltas desde el repositorio institucional JFrog.
+# El operador configura las credenciales de JFrog en el entorno; nunca en VCS.
+[[tool.poetry.source]]
+name = "jfrog"
+url = "https://jfrog.segurosbolivar.com/artifactory/api/pypi/pypi/simple/"
+priority = "primary"
+
+[tool.poetry.dependencies]
+python = ">=3.12,<4.0"
+# Versiones fijadas de forma exacta (sin ^, ~, * ni latest) por regla de seguridad.
+fastapi = "0.115.6"
+uvicorn = "0.34.0"
+pydantic = "2.10.4"
+firebase-admin = "6.6.0"
+python-json-logger = "2.0.7"
+# Cliente HTTP saliente hacia proveedores de identidad: propaga el
+# Correlation-ID y aplica timeout de 15 s (fail-fast) (R10.2, R5.1).
+# Promovido a dependencia de runtime (antes solo dev). Version fijada exacta.
+httpx = "0.28.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "8.3.4"
+hypothesis = "6.122.3"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[build-system]
+requires = ["poetry-core>=1.9.0"]
+build-backend = "poetry.core.masonry.api"
