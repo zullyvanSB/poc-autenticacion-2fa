@@ -11,7 +11,8 @@ tests de integracion, no a estos unitarios). Se verifica:
   `InvalidIdTokenError` de dominio con mensaje generico y sin filtrar el token
   ni la causa concreta al cliente (R5.5, R10.4; Property 4).
 - Derivacion de `UserType`: ``password`` -> Cliente; ``saml.<id>`` -> Interno;
-  proveedor desconocido o ausente -> `UnknownSignInProviderError` (R4.6, R4.7).
+  ``google.com`` -> Corporativo; proveedor desconocido o ausente ->
+  `UnknownSignInProviderError` (R4.6, R4.7, camino B POCA-003).
 
 Se evita invocar `_ensure_initialized` real: se mockea para no requerir
 credenciales ni red (Given/When/Then; sin mocks de datos que falseen la logica).
@@ -23,6 +24,8 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 from firebase_admin import exceptions as firebase_exceptions
 from firebase_admin.auth import ExpiredIdTokenError, InvalidIdTokenError as SdkInvalidIdTokenError
 
@@ -32,6 +35,9 @@ from auth.firebase_auth import (
     InvalidIdTokenError,
     InvalidSessionCookieError,
     UnknownSignInProviderError,
+    _PROVIDER_GOOGLE,
+    _PROVIDER_PASSWORD,
+    _PROVIDER_SAML_PREFIX,
     _SIGN_IN_PROVIDER_CLAIM,
     _TENANT_CLAIM,
     derive_user_type,
@@ -190,21 +196,134 @@ def test_derive_user_type_saml_is_interno(provider: str) -> None:
     assert user_type is UserType.INTERNO
 
 
+def test_derive_user_type_google_is_corporativo() -> None:
+    """`sign_in_provider == "google.com"` deriva en `UserType.CORPORATIVO` (AC-1, FR-1)."""
+    # Given: claims con proveedor Google.
+    claims = _claims_with_provider("google.com")
+    # When: se deriva el tipo de usuario.
+    user_type = derive_user_type(claims)
+    # Then: corresponde a Corporativo y NO eleva UnknownSignInProviderError (camino B).
+    assert user_type is UserType.CORPORATIVO
+
+
+@pytest.mark.parametrize(
+    "provider",
+    [
+        "google.com.attacker",  # contiene pero no iguala google.com
+        "notgoogle.com",  # sufijo que coincide, no igualdad exacta
+        "google.co",  # prefijo parcial
+        "www.google.com",  # subdominio, no el literal
+    ],
+)
+def test_derive_user_type_google_match_is_exact(provider: str) -> None:
+    """Solo el literal exacto `"google.com"` mapea a CORPORATIVO (FR-5, igualdad exacta).
+
+    Valores que contienen pero no igualan `"google.com"` (y no son `password` ni
+    `saml.`) elevan `UnknownSignInProviderError`: no se mapean a CORPORATIVO.
+    """
+    # Given: claims con un proveedor parecido a google.com pero no igual.
+    claims = _claims_with_provider(provider)
+    # When / Then: la derivacion rechaza el proveedor por igualdad exacta.
+    with pytest.raises(UnknownSignInProviderError):
+        derive_user_type(claims)
+
+
+def test_derive_user_type_saml_google_is_interno() -> None:
+    """`"saml.google.com"` deriva en `INTERNO` por el prefijo `saml.`, no por Google (FR-3/FR-5)."""
+    # Given: un proveedor SAML cuyo id contiene "google.com".
+    claims = _claims_with_provider("saml.google.com")
+    # When: se deriva el tipo de usuario.
+    user_type = derive_user_type(claims)
+    # Then: gana el prefijo saml. (INTERNO), nunca el mapeo de Google (CORPORATIVO).
+    assert user_type is UserType.INTERNO
+
+
 @pytest.mark.parametrize(
     "claims",
     [
         {},  # sin objeto firebase
         {"firebase": {}},  # sin sign_in_provider
-        {"firebase": {"sign_in_provider": "google.com"}},  # proveedor no soportado
         {"firebase": {"sign_in_provider": "phone"}},
         {"firebase": "no-es-dict"},  # estructura inesperada
     ],
 )
 def test_derive_user_type_unknown_provider_raises(claims: dict[str, Any]) -> None:
-    """Proveedor ausente o no soportado eleva `UnknownSignInProviderError`."""
+    """Proveedor ausente o no soportado eleva `UnknownSignInProviderError`.
+
+    `google.com` ya NO esta aqui: desde POCA-003 mapea a CORPORATIVO (ver
+    `test_derive_user_type_google_is_corporativo`).
+    """
     # Given / When / Then: la derivacion rechaza el proveedor desconocido.
     with pytest.raises(UnknownSignInProviderError):
         derive_user_type(claims)
+
+
+def test_derive_user_type_error_message_hides_provider() -> None:
+    """El mensaje de `UnknownSignInProviderError` no filtra el valor del proveedor (FR-4, leakage)."""
+    # Given: un proveedor no soportado con un valor distintivo.
+    sensitive_provider = "proveedor-secreto-xyz"
+    claims = _claims_with_provider(sensitive_provider)
+    # When: la derivacion lo rechaza.
+    with pytest.raises(UnknownSignInProviderError) as exc_info:
+        derive_user_type(claims)
+    # Then: el mensaje expuesto es generico y no incluye el valor del proveedor.
+    assert sensitive_provider not in str(exc_info.value)
+
+
+# --------------------------------------------------------------------------- #
+# derive_user_type — propiedades (PBT con hypothesis)
+# --------------------------------------------------------------------------- #
+
+
+# Estrategia de proveedores "desconocidos": strings que NO son `password`, NO
+# empiezan por `saml.` y NO son exactamente `google.com`. Deben elevar siempre.
+_unknown_providers = st.text(max_size=40).filter(
+    lambda p: p != _PROVIDER_PASSWORD
+    and not p.startswith(_PROVIDER_SAML_PREFIX)
+    and p != _PROVIDER_GOOGLE
+)
+
+
+@given(st.sampled_from(["password", "saml.f5apm", "google.com", "phone", ""]))
+def test_derive_user_type_is_deterministic(provider: str) -> None:
+    """Propiedad: para los mismos claims, el resultado es siempre el mismo (pureza/determinismo)."""
+    # Given: claims fijos para un proveedor.
+    claims = _claims_with_provider(provider)
+
+    # When: se evalua dos veces, capturando resultado o excepcion.
+    def _evaluate() -> Any:
+        try:
+            return ("ok", derive_user_type(claims))
+        except UnknownSignInProviderError:
+            return ("raise", None)
+
+    # Then: ambas invocaciones coinciden (funcion determinista y sin estado).
+    assert _evaluate() == _evaluate()
+
+
+@given(_unknown_providers)
+def test_derive_user_type_google_exclusivity(provider: str) -> None:
+    """Propiedad: solo el literal exacto `"google.com"` mapea a CORPORATIVO (FR-5).
+
+    Cualquier string que no sea `password`, no empiece por `saml.` y no sea
+    exactamente `"google.com"` eleva `UnknownSignInProviderError`.
+    """
+    # Given: un proveedor que no es ninguno de los tres mapeos conocidos.
+    claims = _claims_with_provider(provider)
+    # When / Then: se eleva el error de proveedor desconocido.
+    with pytest.raises(UnknownSignInProviderError):
+        derive_user_type(claims)
+
+
+@given(st.text(min_size=1, max_size=30))
+def test_derive_user_type_saml_prefix_invariant(saml_id: str) -> None:
+    """Propiedad: variar el `<id>` de `saml.<id>` siempre da INTERNO (invariancia SAML)."""
+    # Given: un proveedor SAML con id arbitrario.
+    claims = _claims_with_provider(f"{_PROVIDER_SAML_PREFIX}{saml_id}")
+    # When: se deriva el tipo de usuario.
+    user_type = derive_user_type(claims)
+    # Then: siempre INTERNO, nunca CORPORATIVO (aunque el id contenga "google.com").
+    assert user_type is UserType.INTERNO
 
 
 # Session cookie de ejemplo (no es una cookie real; el Admin SDK esta mockeado).

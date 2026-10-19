@@ -89,6 +89,11 @@ _PROVIDER_PASSWORD = "password"
 # Prefijo de `sign_in_provider` para la ruta Interno: Firebase actua como SP
 # SAML y el proveedor toma la forma `saml.<id>` (p. ej. `saml.f5apm`).
 _PROVIDER_SAML_PREFIX = "saml."
+# Valor de `sign_in_provider` para la ruta Corporativo (camino B): correo
+# corporativo que autentica con el `GoogleAuthProvider` nativo de Firebase (2FA
+# delegado a Google 2-Step Verification). Se compara por igualdad EXACTA, no por
+# prefijo/sufijo, para no aceptar valores como `google.com.attacker` (FR-5).
+_PROVIDER_GOOGLE = "google.com"
 
 # Mensaje generico de fallo de verificacion. No revela la causa concreta
 # (firma, emisor, audiencia o vigencia) ni incluye el token (R5.5, R10.4).
@@ -174,9 +179,10 @@ class SessionRevocationError(FirebaseAuthError):
 class UnknownSignInProviderError(FirebaseAuthError):
     """El claim `firebase.sign_in_provider` no corresponde a una ruta conocida.
 
-    Se eleva cuando el proveedor de ingreso no es `password` (Cliente) ni
-    `saml.<id>` (Interno). No incluye el valor del proveedor en el mensaje
-    expuesto para evitar filtrar detalles de la configuracion de identidad.
+    Se eleva cuando el proveedor de ingreso no es `password` (Cliente),
+    `saml.<id>` (Interno) ni `google.com` (Corporativo). No incluye el valor del
+    proveedor en el mensaje expuesto para evitar filtrar detalles de la
+    configuracion de identidad.
     """
 
 
@@ -520,6 +526,13 @@ def derive_user_type(claims: dict[str, Any]) -> UserType:
     - ``"password"`` -> `UserType.CLIENTE` (ruta correo + TOTP en Firebase).
     - ``"saml.<id>"`` (p. ej. ``"saml.f5apm"``) -> `UserType.INTERNO` (ruta SAML
       federada hacia F5 APM).
+    - ``"google.com"`` -> `UserType.CORPORATIVO` (camino B: correo corporativo con
+      el `GoogleAuthProvider` nativo de Firebase; igualdad exacta del literal).
+
+    El caso ``google.com`` se evalua por igualdad EXACTA y despues de
+    ``password``/``saml.`` (sin alterar su precedencia), de modo que
+    ``saml.google.com`` sigue derivando `INTERNO` por el prefijo y valores como
+    ``google.com.attacker`` no mapean a corporativo (FR-5, defensa en profundidad).
 
     Funcion pura y determinista: no realiza E/S y, para los mismos claims,
     produce siempre el mismo resultado. Debe invocarse unicamente sobre claims
@@ -528,7 +541,7 @@ def derive_user_type(claims: dict[str, Any]) -> UserType:
     :param claims: diccionario de claims decodificados de un token verificado.
     :return: el `UserType` correspondiente al proveedor de ingreso.
     :raises UnknownSignInProviderError: si falta el claim o su valor no es
-        ``password`` ni empieza por ``saml.``.
+        ``password``, no empieza por ``saml.`` ni es exactamente ``google.com``.
     """
     firebase_claim = claims.get(_FIREBASE_CLAIM)
     provider: Any = None
@@ -539,6 +552,8 @@ def derive_user_type(claims: dict[str, Any]) -> UserType:
         return UserType.CLIENTE
     if isinstance(provider, str) and provider.startswith(_PROVIDER_SAML_PREFIX):
         return UserType.INTERNO
+    if provider == _PROVIDER_GOOGLE:
+        return UserType.CORPORATIVO
 
     # No se incluye el valor del proveedor en el mensaje para no filtrar
     # detalles de la configuracion de identidad (leakage prevention).
