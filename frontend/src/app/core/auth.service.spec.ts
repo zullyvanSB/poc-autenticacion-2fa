@@ -13,10 +13,16 @@ jest.mock('firebase/auth', () => ({
   getAuth: jest.fn(() => ({})),
   getMultiFactorResolver: jest.fn(),
   getRedirectResult: jest.fn(),
+  multiFactor: jest.fn(),
   SAMLAuthProvider: jest.fn(),
   signInWithEmailAndPassword: jest.fn(),
+  signInWithPopup: jest.fn(),
   signInWithRedirect: jest.fn(),
-  TotpMultiFactorGenerator: { assertionForSignIn: jest.fn() },
+  TotpMultiFactorGenerator: {
+    assertionForSignIn: jest.fn(),
+    assertionForEnrollment: jest.fn(),
+    generateSecret: jest.fn(),
+  },
 }));
 
 describe('AuthService', () => {
@@ -69,6 +75,35 @@ describe('AuthService', () => {
       { identifier: 'cliente@test.com' },
       { withCredentials: true },
     );
+  });
+
+  it('el flujo Interno usa signInWithPopup (no redirect) y emite el UserCredential', (done) => {
+    // Given: config de Firebase resuelta y popup que resuelve con un credential.
+    (environment as { firebase: unknown }).firebase = {
+      apiKey: 'k',
+      authDomain: 'd.firebaseapp.com',
+      projectId: 'p',
+      samlProviderId: 'saml.f5apm',
+    };
+    const fakeCredential = { user: { uid: 'u-interno' } };
+    const { signInWithPopup, signInWithRedirect } =
+      jest.requireMock('firebase/auth') as {
+        signInWithPopup: jest.Mock;
+        signInWithRedirect: jest.Mock;
+      };
+    signInWithPopup.mockResolvedValue(fakeCredential);
+
+    // When
+    service.signInInterno().subscribe({
+      // Then: resuelve por popup, nunca por redirect.
+      next: (credential) => {
+        expect(signInWithPopup).toHaveBeenCalledTimes(1);
+        expect(signInWithRedirect).not.toHaveBeenCalled();
+        expect(credential).toBe(fakeCredential);
+        done();
+      },
+      error: () => done.fail('no debia emitir error'),
+    });
   });
 
   it('no inicializa Firebase si la config no esta resuelta (R9.7)', (done) => {
