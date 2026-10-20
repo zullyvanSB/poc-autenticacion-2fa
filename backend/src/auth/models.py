@@ -27,8 +27,13 @@ class RouteRequest(BaseModel):
 class RouteResponse(BaseModel):
     """Ruta resuelta y metodo de login que el frontend debe iniciar.
 
-    `login_method` es `"password_totp"` para Cliente y `"saml_redirect"` para
-    Interno (R2.1, R2.2).
+    `route_type` puede ser `UserType.CLIENTE`, `UserType.INTERNO` o
+    `UserType.CORPORATIVO`. `login_method` es `"password_totp"` para Cliente,
+    `"saml_redirect"` para Interno y `"google_redirect"` para Corporativo
+    (camino B, Google/Firebase) (R2.1, R2.2). Admitir el valor corporativo no
+    cambia la estructura del DTO ni relaja `extra="forbid"`: `route_type` ya es
+    un `UserType` ampliado y `login_method` es un `str` libre
+    (backward-compatible con los valores existentes).
     """
 
     model_config = ConfigDict(extra="forbid")

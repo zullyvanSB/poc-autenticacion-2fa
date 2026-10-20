@@ -74,6 +74,51 @@ def test_route_cliente_para_correo_valido(client: TestClient) -> None:
     assert response.headers[CORRELATION_ID_HEADER] == body["correlation_id"]
 
 
+def test_route_corporativo_para_correo_de_dominio_permitido(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Given un correo corporativo y allowlist poblada, When se enruta, Then 200 corporativo (AC-1)."""
+    # Given: se simula la frontera de configuracion poblando la allowlist que
+    # `classify_route` resuelve por defecto, sin leer `os.environ` real.
+    monkeypatch.setattr(
+        "auth.routing.get_corporate_allowed_domains",
+        lambda: ["segurosbolivar.com", "serviciosbolivar.com"],
+    )
+
+    # When
+    response = client.post(
+        ROUTE_PATH, json={"identifier": "persona@segurosbolivar.com"}
+    )
+
+    # Then: el handler responde la ruta corporativa con el nuevo login_method.
+    assert response.status_code == 200
+    body = response.json()
+    assert body["route_type"] == "corporativo"
+    assert body["login_method"] == "google_redirect"
+    assert body["correlation_id"]
+    assert response.headers[CORRELATION_ID_HEADER] == body["correlation_id"]
+
+
+def test_route_cliente_para_correo_no_corporativo_sin_regresion(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Given allowlist poblada, When se enruta un correo no corporativo, Then sigue Cliente (AC-3)."""
+    # Given: allowlist poblada igual que el caso corporativo.
+    monkeypatch.setattr(
+        "auth.routing.get_corporate_allowed_domains",
+        lambda: ["segurosbolivar.com", "serviciosbolivar.com"],
+    )
+
+    # When: un correo de dominio fuera de la allowlist.
+    response = client.post(ROUTE_PATH, json={"identifier": "persona@gmail.com"})
+
+    # Then: camino C intacto a nivel de contrato HTTP.
+    assert response.status_code == 200
+    body = response.json()
+    assert body["route_type"] == "cliente"
+    assert body["login_method"] == "password_totp"
+
+
 def test_route_interno_para_numero_valido(client: TestClient) -> None:
     """Given un numero valido, When se enruta, Then responde ruta Interno (R2.2)."""
     # Given / When

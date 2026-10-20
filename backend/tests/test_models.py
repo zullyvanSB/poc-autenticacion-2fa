@@ -14,6 +14,10 @@ Cubren el enum `common.models.UserType` y su etiqueta presentable:
 
 from __future__ import annotations
 
+import pytest
+from pydantic import ValidationError
+
+from auth.models import RouteResponse
 from common.models import UserType
 
 
@@ -55,3 +59,50 @@ def test_user_type_corporativo_has_specific_label() -> None:
     # Then: la etiqueta de CORPORATIVO no colisiona con las demas (coherencia FR-3).
     assert labels[UserType.CORPORATIVO] != labels[UserType.CLIENTE]
     assert labels[UserType.CORPORATIVO] != labels[UserType.INTERNO]
+
+
+def test_route_response_admite_corporativo_backward_compat() -> None:
+    """Given RouteResponse, When se usa el valor corporativo y los existentes, Then (de)serializa sin romper (FR-7, AC-6)."""
+    # Given / When: construir el DTO con el nuevo route_type/login_method corporativo.
+    corporativo = RouteResponse(
+        route_type=UserType.CORPORATIVO,
+        login_method="google_redirect",
+        correlation_id="11111111-1111-4111-8111-111111111111",
+    )
+    dumped = corporativo.model_dump()
+
+    # Then: la serializacion refleja el enum como su valor literal y el nuevo metodo.
+    assert dumped["route_type"] == "corporativo"
+    assert dumped["login_method"] == "google_redirect"
+
+    # And: los valores existentes siguen deserializandose sin error (backward-compat).
+    cliente = RouteResponse.model_validate(
+        {
+            "route_type": "cliente",
+            "login_method": "password_totp",
+            "correlation_id": "22222222-2222-4222-8222-222222222222",
+        }
+    )
+    interno = RouteResponse.model_validate(
+        {
+            "route_type": "interno",
+            "login_method": "saml_redirect",
+            "correlation_id": "33333333-3333-4333-8333-333333333333",
+        }
+    )
+    assert cliente.route_type is UserType.CLIENTE
+    assert interno.route_type is UserType.INTERNO
+
+
+def test_route_response_rechaza_clave_inesperada() -> None:
+    """Given RouteResponse, When llega una clave extra, Then eleva ValidationError (extra=forbid intacto, FR-7)."""
+    # Given / When / Then: admitir el nuevo valor de enum no relaja el esquema.
+    with pytest.raises(ValidationError):
+        RouteResponse.model_validate(
+            {
+                "route_type": "corporativo",
+                "login_method": "google_redirect",
+                "correlation_id": "44444444-4444-4444-8444-444444444444",
+                "unexpected": "x",
+            }
+        )
