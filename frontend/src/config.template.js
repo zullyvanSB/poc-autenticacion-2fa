@@ -24,7 +24,15 @@
  *   API_BASE_URL="https://<backend-cloud-run>/api/v1" \
  *   FIREBASE_API_KEY="..." FIREBASE_AUTH_DOMAIN="<proj>.firebaseapp.com" \
  *   FIREBASE_PROJECT_ID="<proj>" FIREBASE_SAML_PROVIDER_ID="saml.f5-apm" \
+ *   FIREBASE_CORPORATE_HOSTED_DOMAIN="segurosbolivar.com" \
  *     envsubst < src/config.template.js > dist/auth-2fa-poc-frontend/browser/config.js
+ *
+ * El marcador `__FIREBASE_CORPORATE_HOSTED_DOMAIN__` es el dominio corporativo
+ * `hd` del camino B (login con Google). Es OPCIONAL y PUBLICO (no secreto): si no
+ * se sustituye, `resolveConfigString` lo trata como no resuelto (empieza por `__`)
+ * y el campo no se incluye (fail-safe). El `hd` es cosmetico (filtra el selector
+ * de cuenta de Google); la autorizacion real de dominio es server-side
+ * (CORPORATE_ALLOWED_DOMAINS en el backend).
  *
  * Los marcadores se dejan sin sustituir a proposito: un despliegue sin
  * sustitucion NO obtiene valores funcionales embebidos.
@@ -37,6 +45,7 @@ window.__APP_CONFIG__ = {
     projectId: '__FIREBASE_PROJECT_ID__',
     samlProviderId: '__FIREBASE_SAML_PROVIDER_ID__',
     tenantId: '__FIREBASE_TENANT_ID__',
-    appId: '__FIREBASE_APP_ID__'
+    appId: '__FIREBASE_APP_ID__',
+    corporateHostedDomain: '__FIREBASE_CORPORATE_HOSTED_DOMAIN__'
   }
 };

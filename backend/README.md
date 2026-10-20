@@ -51,7 +51,7 @@ GOOGLE_APPLICATION_CREDENTIALS=/secrets/serviceAccount.json
 # ...resto de variables requeridas por StartupValidator
 ```
 
-### Variables opcionales por entorno: `APP_ENV` y `CORS_ALLOWED_ORIGINS`
+### Variables opcionales por entorno: `APP_ENV`, `CORS_ALLOWED_ORIGINS` y `CORPORATE_ALLOWED_DOMAINS`
 
 Estas variables son **opcionales** y tienen valores por defecto seguros
 (fail-safe hacia producción); no forman parte de las variables requeridas por
@@ -71,6 +71,33 @@ Estas variables son **opcionales** y tienen valores por defecto seguros
     (dev server de Angular);
   - en `production` queda vacía y **no se registra** middleware CORS.
   Si defines orígenes explícitos, se respetan tal cual en cualquier entorno.
+- **`CORPORATE_ALLOWED_DOMAINS`**: lista de dominios corporativos permitidos para
+  el login con Google (camino B), separados por comas. La consume el getter
+  `get_corporate_allowed_domains` (`common/config.py`) y la validación
+  server-side del camino B (POCA-004), que autoriza una sesión de Google solo si
+  el dominio del correo del token (la parte tras el `@`) **coincide exactamente**
+  con uno de la lista. Semántica:
+  - Es **opcional** y **NO** forma parte de las variables requeridas por
+    `StartupValidator`: si falta, el arranque no aborta.
+  - Comportamiento **fail-safe**: ausente o vacía ⇒ allowlist vacía ⇒ ningún
+    dominio se trata como corporativo, en **cualquier entorno**; no hay dominios
+    por defecto embebidos. Con la allowlist vacía, la validación server-side
+    rechaza todo token de Google (deny por defecto), de modo que el camino B
+    queda inoperante hasta que se configure la variable.
+  - El valor se **normaliza** (se recortan espacios, se descartan entradas vacías
+    y se pasa a minúsculas) y el match es **exacto**: no cubre subdominios
+    (`mail.segurosbolivar.com` **no** coincide con `segurosbolivar.com`).
+  - Se escribe solo el **dominio** (sin el `@` ni el correo completo).
+
+  Valor de ejemplo (los dos dominios aprobados para la PoC):
+
+  ```dotenv
+  CORPORATE_ALLOWED_DOMAINS=segurosbolivar.com,serviciosbolivar.com
+  ```
+
+  Los dominios corporativos no son secretos; la variable se fija en tu `.env`
+  local (fuera de VCS, ver arriba) o en el env del entorno de despliegue
+  (Secret Manager / Cloud Run). No se versiona ningún `.env` ni `.env.example`.
 
 Para desarrollo local cross-origin (Angular en `http://localhost:4200`, backend
 en `http://127.0.0.1:8081`), activa el perfil local en tu `.env`:
