@@ -66,6 +66,20 @@ _NO_PRESENTABLE_CLAIMS = {
     "firebase": {"sign_in_provider": "password"},
 }
 
+# Claims de ejemplo de un usuario Corporativo (camino B, proveedor
+# `google.com`). Google entrega `name` y `email` como claims TOP-LEVEL (igual
+# que la ruta Cliente/password), NO como atributos SAML. Incluye un claim extra
+# fuera de la allowlist (`picture`) para verificar que no se filtra (FR-4).
+_GOOGLE_EMAIL = "ana.gomez@segurosbolivar.com"
+_GOOGLE_NAME = "Ana Gomez"
+_CORPORATIVO_GOOGLE_CLAIMS = {
+    "uid": "u4",
+    "name": _GOOGLE_NAME,
+    "email": _GOOGLE_EMAIL,
+    "picture": "https://example.com/avatar.png",
+    "firebase": {"sign_in_provider": "google.com"},
+}
+
 # Claims de un Interno (SAML) tal como los expone Identity Platform cuando el
 # IdP (F5 APM) envia NameID `persistent` y el correo/nombre como ATRIBUTOS
 # bajo `firebase.sign_in_attributes` (con las URIs de WS-Fed/SAML). No hay
@@ -148,9 +162,16 @@ def test_dashboard_valid_session_returns_masked_claims(client: TestClient) -> No
     # Then: 200 con los datos del dashboard.
     assert response.status_code == 200
     body = response.json()
-    assert set(body.keys()) == {"display_name", "user_type", "claims"}
+    assert set(body.keys()) == {
+        "display_name",
+        "user_type",
+        "user_type_label",
+        "claims",
+    }
     assert body["display_name"] == "Ana Perez"
     assert body["user_type"] == "cliente"
+    # No-regresion: la etiqueta presentable del Cliente (POCA-001) (FR-5).
+    assert body["user_type_label"] == "Cliente"
 
     # Then: el correo viaja enmascarado a <=4 caracteres de sufijo (R6.4).
     claims = {claim["name"]: claim["value"] for claim in body["claims"]}
@@ -180,6 +201,7 @@ def test_dashboard_masks_document_and_defaults_display_name(
     assert response.status_code == 200
     body = response.json()
     assert body["user_type"] == "interno"
+    assert body["user_type_label"] == "Colaborador interno"
     assert body["display_name"] == "Usuario"
 
     # Then: el documento viaja enmascarado dejando a lo sumo 4 ultimos digitos.
@@ -205,6 +227,7 @@ def test_dashboard_interno_saml_maps_email_and_name_from_attributes(
     assert response.status_code == 200
     body = response.json()
     assert body["user_type"] == "interno"
+    assert body["user_type_label"] == "Colaborador interno"
     assert body["display_name"] == _SAML_INTERNO_FULLNAME
 
     # Then: el correo se tomo del atributo SAML `mail` y viaja ENMASCARADO.
@@ -215,6 +238,61 @@ def test_dashboard_interno_saml_maps_email_and_name_from_attributes(
     assert claims["email"].startswith("*")
     # El correo crudo NO aparece en ninguna parte de la respuesta (leakage).
     assert _SAML_INTERNO_EMAIL not in response.text
+
+
+def test_dashboard_google_session_returns_corporativo_label_and_masked_email(
+    client: TestClient,
+) -> None:
+    """Given sesion de Google (camino B), When GET dashboard, Then corporativo con etiqueta y email enmascarado.
+
+    Cubre AC-1/AC-2/FR-1/FR-2/FR-3: para `sign_in_provider == "google.com"` con
+    `name`/`email` top-level, el dashboard devuelve `user_type` corporativo, la
+    etiqueta presentable "Usuario corporativo", `display_name` igual al claim
+    `name` y el `email` enmascarado sin exponer el correo crudo (leakage).
+    """
+    # Given: la cookie valida verifica con claims de Google (corporativo).
+    with patch(
+        "dashboard.router.verify_session_cookie",
+        return_value=_CORPORATIVO_GOOGLE_CLAIMS,
+    ):
+        # When
+        response = _get_with_cookie(client, _SAMPLE_SESSION_COOKIE)
+
+    # Then: 200, tipo corporativo, etiqueta presentable y nombre del claim name.
+    assert response.status_code == 200
+    body = response.json()
+    assert body["user_type"] == "corporativo"
+    assert body["user_type_label"] == "Usuario corporativo"
+    assert body["display_name"] == _GOOGLE_NAME
+
+    # Then: el correo de Google (top-level) viaja ENMASCARADO (<=4 de sufijo).
+    claims = {claim["name"]: claim["value"] for claim in body["claims"]}
+    assert claims["name"] == _GOOGLE_NAME
+    assert claims["email"].endswith(".com")
+    assert claims["email"] != _GOOGLE_EMAIL
+    assert claims["email"].startswith("*")
+    # El correo crudo NO aparece en ninguna parte de la respuesta (leakage).
+    assert _GOOGLE_EMAIL not in response.text
+
+
+def test_dashboard_google_session_drops_claims_outside_allowlist(
+    client: TestClient,
+) -> None:
+    """Given sesion de Google con claim fuera de la allowlist, Then ese claim no sale (FR-4)."""
+    # Given: los claims de Google incluyen `picture`, fuera de _PRESENTABLE_CLAIMS.
+    with patch(
+        "dashboard.router.verify_session_cookie",
+        return_value=_CORPORATIVO_GOOGLE_CLAIMS,
+    ):
+        # When
+        response = _get_with_cookie(client, _SAMPLE_SESSION_COOKIE)
+
+    # Then: solo salen claims de la allowlist; `picture` nunca se expone.
+    assert response.status_code == 200
+    body = response.json()
+    claim_names = {claim["name"] for claim in body["claims"]}
+    assert "picture" not in claim_names
+    assert _CORPORATIVO_GOOGLE_CLAIMS["picture"] not in response.text
 
 
 def test_dashboard_valid_session_without_presentable_claims_returns_empty(
