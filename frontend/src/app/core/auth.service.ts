@@ -17,6 +17,7 @@ import {
   multiFactor,
   SAMLAuthProvider,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signInWithRedirect,
   TotpMultiFactorGenerator,
 } from 'firebase/auth';
@@ -390,14 +391,18 @@ export class AuthService {
   }
 
   /**
-   * Flujo Interno (R4): inicia la autenticacion SAML redirigiendo a F5 APM a
-   * traves de Firebase como Service Provider. El `samlProviderId` se resuelve
-   * por entorno. El navegador abandona la pagina; el retorno se maneja con
-   * `completeRedirectSignIn`.
+   * Flujo Interno (R4): inicia la autenticacion SAML hacia F5 APM a traves de
+   * Firebase como Service Provider usando una ventana emergente
+   * (`signInWithPopup`). A diferencia de `signInWithRedirect`, el popup
+   * completa el flujo SAML en una ventana aparte y devuelve el `UserCredential`
+   * directamente a esta instancia de `Auth`, sin depender del estado de
+   * redirect persistido entre dominios (que los navegadores pierden al bloquear
+   * cookies de terceros cuando el `authDomain` difiere del origen de la app).
+   * El `samlProviderId` se resuelve por entorno.
    *
-   * @returns observable que completa cuando se dispara la redireccion.
+   * @returns observable con el `UserCredential` resultante del popup SAML.
    */
-  signInInterno(): Observable<void> {
+  signInInterno(): Observable<UserCredential> {
     let auth: Auth;
     let samlProviderId: string;
     try {
@@ -407,7 +412,7 @@ export class AuthService {
       return throwError(() => error);
     }
     const provider = new SAMLAuthProvider(samlProviderId);
-    return from(signInWithRedirect(auth, provider));
+    return from(signInWithPopup(auth, provider));
   }
 
   /**

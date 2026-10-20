@@ -736,11 +736,20 @@ export class LoginComponent implements OnInit {
   }
 
   /**
-   * Dispara el redirect SAML del Interno (R4). El navegador abandona la pagina;
-   * ante fallo al iniciar la redireccion se muestra un mensaje generico.
+   * Dispara la autenticacion SAML del Interno (R4) mediante ventana emergente
+   * (`signInWithPopup`). A diferencia del redirect, el popup completa el flujo
+   * SAML y devuelve el `UserCredential` directamente aqui, por lo que se obtiene
+   * el ID token y se establece la sesion server-side en el mismo flujo (sin
+   * depender del retorno por `getRedirectResult`, que los navegadores pierden
+   * entre dominios al bloquear cookies de terceros). Ante fallo (popup cerrado,
+   * bloqueado o asercion rechazada) se muestra un mensaje generico.
    */
   private startInternoRedirect(): void {
     this.auth.signInInterno().subscribe({
+      next: (credential: UserCredential) => {
+        this.processingRedirect.set(true);
+        this.establishSessionAndContinue(credential.user);
+      },
       error: () => {
         this.submitting.set(false);
         this.backendError.set(GENERIC_LOGIN_ERROR);
