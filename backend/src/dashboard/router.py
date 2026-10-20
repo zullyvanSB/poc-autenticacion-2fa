@@ -319,6 +319,7 @@ def get_dashboard(request: Request) -> JSONResponse:
     dashboard = DashboardResponse(
         display_name=display_name,
         user_type=user_type,
+        user_type_label=user_type.label,
         claims=masked_claims,
     )
 

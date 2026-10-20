@@ -36,4 +36,10 @@ class DashboardResponse(BaseModel):
 
     display_name: str
     user_type: UserType
+    # Etiqueta presentable del tipo de usuario, derivada de `UserType.label`
+    # (fuente unica, POCA-001). Campo aditivo que no reemplaza `user_type`:
+    # transporta el texto legible (p. ej. "Usuario corporativo") sin que el
+    # cliente deba conocer el mapa de etiquetas. El handler lo puebla al armar
+    # la respuesta.
+    user_type_label: str
     claims: list[MaskedClaim]
