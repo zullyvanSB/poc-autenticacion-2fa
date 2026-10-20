@@ -11,7 +11,8 @@ tests de integracion, no a estos unitarios). Se verifica:
   `InvalidIdTokenError` de dominio con mensaje generico y sin filtrar el token
   ni la causa concreta al cliente (R5.5, R10.4; Property 4).
 - Derivacion de `UserType`: ``password`` -> Cliente; ``saml.<id>`` -> Interno;
-  proveedor desconocido o ausente -> `UnknownSignInProviderError` (R4.6, R4.7).
+  ``google.com`` -> Corporativo; proveedor desconocido o ausente ->
+  `UnknownSignInProviderError` (R4.6, R4.7, camino B POCA-003).
 
 Se evita invocar `_ensure_initialized` real: se mockea para no requerir
 credenciales ni red (Given/When/Then; sin mocks de datos que falseen la logica).
@@ -23,6 +24,8 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 from firebase_admin import exceptions as firebase_exceptions
 from firebase_admin.auth import ExpiredIdTokenError, InvalidIdTokenError as SdkInvalidIdTokenError
 
@@ -32,9 +35,13 @@ from auth.firebase_auth import (
     InvalidIdTokenError,
     InvalidSessionCookieError,
     UnknownSignInProviderError,
+    _PROVIDER_GOOGLE,
+    _PROVIDER_PASSWORD,
+    _PROVIDER_SAML_PREFIX,
     _SIGN_IN_PROVIDER_CLAIM,
     _TENANT_CLAIM,
     derive_user_type,
+    is_allowed_corporate_email,
     verify_id_token,
     verify_session_cookie,
 )
@@ -190,21 +197,134 @@ def test_derive_user_type_saml_is_interno(provider: str) -> None:
     assert user_type is UserType.INTERNO
 
 
+def test_derive_user_type_google_is_corporativo() -> None:
+    """`sign_in_provider == "google.com"` deriva en `UserType.CORPORATIVO` (AC-1, FR-1)."""
+    # Given: claims con proveedor Google.
+    claims = _claims_with_provider("google.com")
+    # When: se deriva el tipo de usuario.
+    user_type = derive_user_type(claims)
+    # Then: corresponde a Corporativo y NO eleva UnknownSignInProviderError (camino B).
+    assert user_type is UserType.CORPORATIVO
+
+
+@pytest.mark.parametrize(
+    "provider",
+    [
+        "google.com.attacker",  # contiene pero no iguala google.com
+        "notgoogle.com",  # sufijo que coincide, no igualdad exacta
+        "google.co",  # prefijo parcial
+        "www.google.com",  # subdominio, no el literal
+    ],
+)
+def test_derive_user_type_google_match_is_exact(provider: str) -> None:
+    """Solo el literal exacto `"google.com"` mapea a CORPORATIVO (FR-5, igualdad exacta).
+
+    Valores que contienen pero no igualan `"google.com"` (y no son `password` ni
+    `saml.`) elevan `UnknownSignInProviderError`: no se mapean a CORPORATIVO.
+    """
+    # Given: claims con un proveedor parecido a google.com pero no igual.
+    claims = _claims_with_provider(provider)
+    # When / Then: la derivacion rechaza el proveedor por igualdad exacta.
+    with pytest.raises(UnknownSignInProviderError):
+        derive_user_type(claims)
+
+
+def test_derive_user_type_saml_google_is_interno() -> None:
+    """`"saml.google.com"` deriva en `INTERNO` por el prefijo `saml.`, no por Google (FR-3/FR-5)."""
+    # Given: un proveedor SAML cuyo id contiene "google.com".
+    claims = _claims_with_provider("saml.google.com")
+    # When: se deriva el tipo de usuario.
+    user_type = derive_user_type(claims)
+    # Then: gana el prefijo saml. (INTERNO), nunca el mapeo de Google (CORPORATIVO).
+    assert user_type is UserType.INTERNO
+
+
 @pytest.mark.parametrize(
     "claims",
     [
         {},  # sin objeto firebase
         {"firebase": {}},  # sin sign_in_provider
-        {"firebase": {"sign_in_provider": "google.com"}},  # proveedor no soportado
         {"firebase": {"sign_in_provider": "phone"}},
         {"firebase": "no-es-dict"},  # estructura inesperada
     ],
 )
 def test_derive_user_type_unknown_provider_raises(claims: dict[str, Any]) -> None:
-    """Proveedor ausente o no soportado eleva `UnknownSignInProviderError`."""
+    """Proveedor ausente o no soportado eleva `UnknownSignInProviderError`.
+
+    `google.com` ya NO esta aqui: desde POCA-003 mapea a CORPORATIVO (ver
+    `test_derive_user_type_google_is_corporativo`).
+    """
     # Given / When / Then: la derivacion rechaza el proveedor desconocido.
     with pytest.raises(UnknownSignInProviderError):
         derive_user_type(claims)
+
+
+def test_derive_user_type_error_message_hides_provider() -> None:
+    """El mensaje de `UnknownSignInProviderError` no filtra el valor del proveedor (FR-4, leakage)."""
+    # Given: un proveedor no soportado con un valor distintivo.
+    sensitive_provider = "proveedor-secreto-xyz"
+    claims = _claims_with_provider(sensitive_provider)
+    # When: la derivacion lo rechaza.
+    with pytest.raises(UnknownSignInProviderError) as exc_info:
+        derive_user_type(claims)
+    # Then: el mensaje expuesto es generico y no incluye el valor del proveedor.
+    assert sensitive_provider not in str(exc_info.value)
+
+
+# --------------------------------------------------------------------------- #
+# derive_user_type — propiedades (PBT con hypothesis)
+# --------------------------------------------------------------------------- #
+
+
+# Estrategia de proveedores "desconocidos": strings que NO son `password`, NO
+# empiezan por `saml.` y NO son exactamente `google.com`. Deben elevar siempre.
+_unknown_providers = st.text(max_size=40).filter(
+    lambda p: p != _PROVIDER_PASSWORD
+    and not p.startswith(_PROVIDER_SAML_PREFIX)
+    and p != _PROVIDER_GOOGLE
+)
+
+
+@given(st.sampled_from(["password", "saml.f5apm", "google.com", "phone", ""]))
+def test_derive_user_type_is_deterministic(provider: str) -> None:
+    """Propiedad: para los mismos claims, el resultado es siempre el mismo (pureza/determinismo)."""
+    # Given: claims fijos para un proveedor.
+    claims = _claims_with_provider(provider)
+
+    # When: se evalua dos veces, capturando resultado o excepcion.
+    def _evaluate() -> Any:
+        try:
+            return ("ok", derive_user_type(claims))
+        except UnknownSignInProviderError:
+            return ("raise", None)
+
+    # Then: ambas invocaciones coinciden (funcion determinista y sin estado).
+    assert _evaluate() == _evaluate()
+
+
+@given(_unknown_providers)
+def test_derive_user_type_google_exclusivity(provider: str) -> None:
+    """Propiedad: solo el literal exacto `"google.com"` mapea a CORPORATIVO (FR-5).
+
+    Cualquier string que no sea `password`, no empiece por `saml.` y no sea
+    exactamente `"google.com"` eleva `UnknownSignInProviderError`.
+    """
+    # Given: un proveedor que no es ninguno de los tres mapeos conocidos.
+    claims = _claims_with_provider(provider)
+    # When / Then: se eleva el error de proveedor desconocido.
+    with pytest.raises(UnknownSignInProviderError):
+        derive_user_type(claims)
+
+
+@given(st.text(min_size=1, max_size=30))
+def test_derive_user_type_saml_prefix_invariant(saml_id: str) -> None:
+    """Propiedad: variar el `<id>` de `saml.<id>` siempre da INTERNO (invariancia SAML)."""
+    # Given: un proveedor SAML con id arbitrario.
+    claims = _claims_with_provider(f"{_PROVIDER_SAML_PREFIX}{saml_id}")
+    # When: se deriva el tipo de usuario.
+    user_type = derive_user_type(claims)
+    # Then: siempre INTERNO, nunca CORPORATIVO (aunque el id contenga "google.com").
+    assert user_type is UserType.INTERNO
 
 
 # Session cookie de ejemplo (no es una cookie real; el Admin SDK esta mockeado).
@@ -262,3 +382,176 @@ def test_verify_session_cookie_rejects_wrong_tenant_generically(
 
     # Then: el mensaje generico no revela que el motivo fue el tenant.
     assert str(exc_info.value) == "La sesion no es valida."
+
+
+# --------------------------------------------------------------------------- #
+# is_allowed_corporate_email — funcion pura de validacion de dominio (POCA-004)
+# --------------------------------------------------------------------------- #
+
+# Allowlist de prueba (ya normalizada a minusculas, como la entrega POCA-001).
+_ALLOWED_DOMAINS = ["segurosbolivar.com", "serviciosbolivar.com"]
+
+
+@pytest.mark.parametrize(
+    "email",
+    [
+        "user@segurosbolivar.com",
+        "user@serviciosbolivar.com",
+        "nombre.apellido@segurosbolivar.com",
+    ],
+)
+def test_is_allowed_corporate_email_accepts_allowed_domain(email: str) -> None:
+    """Given correo de dominio permitido, When se valida, Then True (FR-3)."""
+    # Given / When: se valida un correo cuyo dominio esta en la allowlist.
+    # Then: se autoriza.
+    assert is_allowed_corporate_email(email, _ALLOWED_DOMAINS) is True
+
+
+@pytest.mark.parametrize("email", ["user@gmail.com", "user@samtel.eu", "x@outlook.com"])
+def test_is_allowed_corporate_email_rejects_non_allowed_domain(email: str) -> None:
+    """Given correo de dominio no permitido, When se valida, Then False (AC-3)."""
+    # Given / When / Then: dominio fuera de la allowlist no se autoriza.
+    assert is_allowed_corporate_email(email, _ALLOWED_DOMAINS) is False
+
+
+@pytest.mark.parametrize(
+    "email",
+    [
+        "user@sub.segurosbolivar.com",  # subdominio
+        "user@evil-segurosbolivar.com",  # prefijo pegado
+        "user@segurosbolivar.com.attacker.com",  # sufijo pegado
+        "user@xsegurosbolivar.com",  # prefijo sin separador
+    ],
+)
+def test_is_allowed_corporate_email_match_is_exact(email: str) -> None:
+    """Given dominio que no iguala exacto, When se valida, Then False (FR-6, AC-4)."""
+    # Given / When / Then: solo el match exacto del dominio completo autoriza.
+    assert is_allowed_corporate_email(email, _ALLOWED_DOMAINS) is False
+
+
+@pytest.mark.parametrize(
+    "email",
+    [
+        "User@SegurosBolivar.COM",
+        "USER@SEGUROSBOLIVAR.COM",
+        "user@SegurosBolivar.com",
+    ],
+)
+def test_is_allowed_corporate_email_is_case_insensitive(email: str) -> None:
+    """Given dominio con casing variado, When se valida, Then True (case-insensitive)."""
+    # Given / When / Then: el dominio se normaliza a minusculas antes de comparar.
+    assert is_allowed_corporate_email(email, _ALLOWED_DOMAINS) is True
+
+
+@pytest.mark.parametrize(
+    "email",
+    [
+        None,  # ausente
+        "",  # vacio
+        "   ",  # solo espacios
+        "sin-arroba",  # sin @
+        "user@",  # dominio vacio
+        "@segurosbolivar.com",  # parte local vacia pero dominio presente -> se evalua el dominio
+        123,  # no-str
+        "user@ ",  # dominio en blanco tras recorte
+    ],
+)
+def test_is_allowed_corporate_email_fail_safe_deny(email: Any) -> None:
+    """Given correo ausente/no-str/sin dominio extraible, When se valida, Then False (fail-safe)."""
+    # Given / When / Then: entradas no validas NUNCA autorizan (fail-safe deny).
+    # Excepcion intencional: "@segurosbolivar.com" tiene dominio extraible valido;
+    # se cubre por separado en test_is_allowed_corporate_email_empty_local_part.
+    if email == "@segurosbolivar.com":
+        return
+    assert is_allowed_corporate_email(email, _ALLOWED_DOMAINS) is False
+
+
+def test_is_allowed_corporate_email_empty_local_part_uses_domain() -> None:
+    """Given correo con dominio valido pero parte local vacia, Then decide por el dominio.
+
+    El anclaje es el dominio tras el ultimo `@`; la parte local es irrelevante
+    para la decision de autorizacion.
+    """
+    assert is_allowed_corporate_email("@segurosbolivar.com", _ALLOWED_DOMAINS) is True
+
+
+def test_is_allowed_corporate_email_uses_last_at_segment() -> None:
+    """Given correo con multiples `@`, When se valida, Then el dominio es tras el ultimo `@`."""
+    # Given: correo con dos arrobas; el dominio real es la ultima porcion.
+    # Then: `@` extra en la parte local no altera el dominio permitido.
+    assert is_allowed_corporate_email("a@b@segurosbolivar.com", _ALLOWED_DOMAINS) is True
+    assert is_allowed_corporate_email("a@segurosbolivar.com@evil.com", _ALLOWED_DOMAINS) is False
+
+
+def test_is_allowed_corporate_email_empty_allowlist_denies_all() -> None:
+    """Given allowlist vacia, When se valida cualquier correo, Then False (fail-safe)."""
+    # Given / When / Then: sin dominios configurados, ningun correo se autoriza.
+    assert is_allowed_corporate_email("user@segurosbolivar.com", []) is False
+
+
+# --------------------------------------------------------------------------- #
+# is_allowed_corporate_email — propiedades (PBT con hypothesis)
+# --------------------------------------------------------------------------- #
+
+
+@given(
+    st.text(max_size=60) | st.none(),
+    st.lists(st.text(min_size=1, max_size=20), max_size=5),
+)
+def test_is_allowed_corporate_email_is_deterministic(
+    email: str | None, allowed: list[str]
+) -> None:
+    """Propiedad: mismos (email, allowlist) ⇒ mismo resultado (pureza/determinismo)."""
+    # Given / When / Then: dos evaluaciones con los mismos argumentos coinciden.
+    assert is_allowed_corporate_email(email, list(allowed)) == is_allowed_corporate_email(
+        email, list(allowed)
+    )
+
+
+@given(st.sampled_from(["segurosbolivar.com", "serviciosbolivar.com"]), st.text(min_size=1, max_size=10))
+def test_is_allowed_corporate_email_case_insensitive_property(
+    domain: str, local: str
+) -> None:
+    """Propiedad: variar el casing del dominio no cambia el resultado (case-insensitive)."""
+    # Given: un dominio permitido con casing arbitrario.
+    import random
+
+    swapped = "".join(
+        ch.upper() if random.random() < 0.5 else ch.lower() for ch in domain
+    )
+    local_clean = local.replace("@", "")
+    # Then: ambas variantes de casing clasifican igual (ambas permitidas).
+    assert is_allowed_corporate_email(
+        f"{local_clean}@{swapped}", _ALLOWED_DOMAINS
+    ) is True
+
+
+@given(st.text(min_size=1, max_size=20))
+def test_is_allowed_corporate_email_empty_allowlist_never_authorizes(
+    local: str,
+) -> None:
+    """Propiedad: con allowlist vacia, ningun correo se autoriza (fail-safe)."""
+    # Given / When / Then: allowlist vacia ⇒ siempre False.
+    local_clean = local.replace("@", "") or "u"
+    assert is_allowed_corporate_email(f"{local_clean}@segurosbolivar.com", []) is False
+
+
+@given(st.text(max_size=40).filter(lambda s: "@" not in s))
+def test_is_allowed_corporate_email_without_at_never_authorizes(email: str) -> None:
+    """Propiedad: un correo sin `@` nunca se autoriza (dominio no extraible)."""
+    # Given / When / Then: sin `@` no hay dominio ⇒ fail-safe deny.
+    assert is_allowed_corporate_email(email, _ALLOWED_DOMAINS) is False
+
+
+@given(
+    st.sampled_from(["segurosbolivar.com", "serviciosbolivar.com"]),
+    st.text(min_size=1, max_size=8).filter(lambda s: "@" not in s and "." not in s),
+)
+def test_is_allowed_corporate_email_subdomain_not_accepted(
+    base_domain: str, label: str
+) -> None:
+    """Propiedad: ningun `sub.d` ni `x-d` del dominio permitido se acepta (match exacto)."""
+    # Given: un subdominio y un prefijo pegado del dominio permitido.
+    # Then: match exacto ⇒ ninguno autoriza.
+    assert is_allowed_corporate_email(f"u@{label}.{base_domain}", _ALLOWED_DOMAINS) is False
+    assert is_allowed_corporate_email(f"u@{label}-{base_domain}", _ALLOWED_DOMAINS) is False

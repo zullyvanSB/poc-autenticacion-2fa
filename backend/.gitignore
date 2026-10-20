@@ -11,6 +11,11 @@ __pycache__/
 dist/
 build/
 *.egg-info/
+# Artefactos de cobertura y property-based testing
+.coverage
+.coverage.*
+htmlcov/
+.hypothesis/
 
 # Entornos virtuales
 .venv/

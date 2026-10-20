@@ -55,6 +55,7 @@ __all__ = [
     "clamp_session_duration_seconds",
     "create_session_cookie",
     "derive_user_type",
+    "is_allowed_corporate_email",
     "revoke_session",
     "verify_id_token",
     "verify_session_cookie",
@@ -89,6 +90,11 @@ _PROVIDER_PASSWORD = "password"
 # Prefijo de `sign_in_provider` para la ruta Interno: Firebase actua como SP
 # SAML y el proveedor toma la forma `saml.<id>` (p. ej. `saml.f5apm`).
 _PROVIDER_SAML_PREFIX = "saml."
+# Valor de `sign_in_provider` para la ruta Corporativo (camino B): correo
+# corporativo que autentica con el `GoogleAuthProvider` nativo de Firebase (2FA
+# delegado a Google 2-Step Verification). Se compara por igualdad EXACTA, no por
+# prefijo/sufijo, para no aceptar valores como `google.com.attacker` (FR-5).
+_PROVIDER_GOOGLE = "google.com"
 
 # Mensaje generico de fallo de verificacion. No revela la causa concreta
 # (firma, emisor, audiencia o vigencia) ni incluye el token (R5.5, R10.4).
@@ -174,9 +180,10 @@ class SessionRevocationError(FirebaseAuthError):
 class UnknownSignInProviderError(FirebaseAuthError):
     """El claim `firebase.sign_in_provider` no corresponde a una ruta conocida.
 
-    Se eleva cuando el proveedor de ingreso no es `password` (Cliente) ni
-    `saml.<id>` (Interno). No incluye el valor del proveedor en el mensaje
-    expuesto para evitar filtrar detalles de la configuracion de identidad.
+    Se eleva cuando el proveedor de ingreso no es `password` (Cliente),
+    `saml.<id>` (Interno) ni `google.com` (Corporativo). No incluye el valor del
+    proveedor en el mensaje expuesto para evitar filtrar detalles de la
+    configuracion de identidad.
     """
 
 
@@ -520,6 +527,13 @@ def derive_user_type(claims: dict[str, Any]) -> UserType:
     - ``"password"`` -> `UserType.CLIENTE` (ruta correo + TOTP en Firebase).
     - ``"saml.<id>"`` (p. ej. ``"saml.f5apm"``) -> `UserType.INTERNO` (ruta SAML
       federada hacia F5 APM).
+    - ``"google.com"`` -> `UserType.CORPORATIVO` (camino B: correo corporativo con
+      el `GoogleAuthProvider` nativo de Firebase; igualdad exacta del literal).
+
+    El caso ``google.com`` se evalua por igualdad EXACTA y despues de
+    ``password``/``saml.`` (sin alterar su precedencia), de modo que
+    ``saml.google.com`` sigue derivando `INTERNO` por el prefijo y valores como
+    ``google.com.attacker`` no mapean a corporativo (FR-5, defensa en profundidad).
 
     Funcion pura y determinista: no realiza E/S y, para los mismos claims,
     produce siempre el mismo resultado. Debe invocarse unicamente sobre claims
@@ -528,7 +542,7 @@ def derive_user_type(claims: dict[str, Any]) -> UserType:
     :param claims: diccionario de claims decodificados de un token verificado.
     :return: el `UserType` correspondiente al proveedor de ingreso.
     :raises UnknownSignInProviderError: si falta el claim o su valor no es
-        ``password`` ni empieza por ``saml.``.
+        ``password``, no empieza por ``saml.`` ni es exactamente ``google.com``.
     """
     firebase_claim = claims.get(_FIREBASE_CLAIM)
     provider: Any = None
@@ -539,6 +553,8 @@ def derive_user_type(claims: dict[str, Any]) -> UserType:
         return UserType.CLIENTE
     if isinstance(provider, str) and provider.startswith(_PROVIDER_SAML_PREFIX):
         return UserType.INTERNO
+    if provider == _PROVIDER_GOOGLE:
+        return UserType.CORPORATIVO
 
     # No se incluye el valor del proveedor en el mensaje para no filtrar
     # detalles de la configuracion de identidad (leakage prevention).
@@ -546,3 +562,46 @@ def derive_user_type(claims: dict[str, Any]) -> UserType:
     raise UnknownSignInProviderError(
         "El proveedor de ingreso del token no corresponde a una ruta conocida."
     )
+
+
+def is_allowed_corporate_email(
+    email: str | None, allowed_domains: list[str]
+) -> bool:
+    """Indica si el dominio del correo pertenece a la allowlist corporativa.
+
+    Regla de seguridad (camino B, POCA-004): la autorizacion corporativa se
+    ancla en el claim ``email`` del ID token verificado, nunca en el parametro
+    ``hd`` que provee el frontend (cosmetico y eludible). Extrae el dominio como
+    la porcion tras el ULTIMO ``@`` del correo, lo normaliza a minusculas y lo
+    compara por **match EXACTO** (igualdad completa del dominio) contra
+    ``allowed_domains`` (que POCA-001 entrega ya normalizada a minusculas). No
+    hay tratamiento de sufijo ni subdominio: ``sub.segurosbolivar.com`` y
+    ``evil-segurosbolivar.com`` NO coinciden con ``segurosbolivar.com``.
+
+    **Fail-safe deny** (R5.3, defensa en profundidad): devuelve ``False`` cuando
+    ``email`` es ``None``/no-``str``/vacio, no contiene ``@``, la parte de
+    dominio queda vacia (incluso tras recortar espacios), o ``allowed_domains``
+    esta vacia. La ausencia de un dominio extraible o de configuracion nunca
+    autoriza por defecto.
+
+    Funcion pura y determinista: no realiza E/S, no registra ni accede a estado;
+    para los mismos argumentos produce siempre el mismo resultado, de modo que
+    sea verificable de forma aislada (sin HTTP ni mocks del SDK).
+
+    :param email: claim ``email`` (top-level) del token verificado, o ``None``.
+    :param allowed_domains: allowlist de dominios normalizados a minusculas
+        (``get_corporate_allowed_domains`` de POCA-001); vacia ⇒ nadie autorizado.
+    :return: ``True`` solo si el dominio del ``email`` hace match exacto
+        (case-insensitive) con alguna entrada de ``allowed_domains``; ``False``
+        en cualquier otro caso (fail-safe deny).
+    """
+    if not isinstance(email, str) or not allowed_domains:
+        return False
+    # El dominio es la porcion tras el ULTIMO `@`: un `@` extra en la parte
+    # local no debe alterar el dominio real que se autoriza (anclaje en email).
+    if "@" not in email:
+        return False
+    domain = email.rsplit("@", 1)[1].strip().lower()
+    if not domain:
+        return False
+    return domain in allowed_domains
