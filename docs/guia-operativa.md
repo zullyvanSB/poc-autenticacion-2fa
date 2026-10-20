@@ -465,6 +465,15 @@ observable que confirma la federación.
 > **ACS URL** `https://sandbox-arquitectura.firebaseapp.com/__/auth/handler` y
 > **SP Entity ID** `https://sandbox-arquitectura.firebaseapp.com`.
 
+> **Camino B (login corporativo con Google):** los pasos de configuración del
+> operador para dejar operativo el login con Google —habilitar el proveedor
+> `GoogleAuthProvider` dentro del tenant `poc-auth-2fa-vh5h3`, autorizar los
+> dominios `@segurosbolivar.com` y `@serviciosbolivar.com`, y fijar la allowlist
+> server-side `CORPORATE_ALLOWED_DOMAINS` (backend) y el `corporateHostedDomain`/`hd`
+> (frontend)— están consolidados en `docs/runbook-camino-b-google.md` (análogo al
+> runbook del camino A). El runbook advierte que el `hd` del frontend es
+> **cosmético** y que la autorización real de dominio es **server-side**.
+
 > **Nota (tenant):** para el flujo **Interno**, el proveedor SAML debe crearse
 > **dentro del tenant** dedicado. En la consola de Identity Platform, **seleccione
 > primero el tenant `<TENANT_ID>`** (p. ej. `poc-auth-2fa-vh5h3`) y luego vaya a
