@@ -29,3 +29,7 @@ venv/
 *credentials*.json
 *.pem
 *.key
+# Artefactos de cobertura y property-based testing
+.coverage
+.coverage.*
+.hypothesis/
