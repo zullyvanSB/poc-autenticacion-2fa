@@ -14,6 +14,7 @@ import {
   getAuth,
   getMultiFactorResolver,
   getRedirectResult,
+  GoogleAuthProvider,
   multiFactor,
   SAMLAuthProvider,
   signInWithEmailAndPassword,
@@ -50,8 +51,12 @@ export class AuthenticationError extends Error {
   }
 }
 
-/** Tipo de ruta resuelto por el backend (R2.1, R2.2). */
-export type RouteType = 'cliente' | 'interno';
+/**
+ * Tipo de ruta resuelto por el backend (R2.1, R2.2). Espejo en frontend del
+ * enum `UserType` del backend; `'corporativo'` coincide exactamente con el
+ * `route_type` que emite POCA-002 para el camino B (login con Google).
+ */
+export type RouteType = 'cliente' | 'interno' | 'corporativo';
 
 /** Respuesta del endpoint `/api/v1/auth/route` (contrato del backend). */
 export interface RouteResponse {
@@ -412,6 +417,44 @@ export class AuthService {
       return throwError(() => error);
     }
     const provider = new SAMLAuthProvider(samlProviderId);
+    return from(signInWithPopup(auth, provider));
+  }
+
+  /**
+   * Flujo Corporativo (camino B): inicia la autenticacion con Google a traves
+   * del `GoogleAuthProvider` nativo de Firebase usando una ventana emergente
+   * (`signInWithPopup`), igual que `signInInterno`. Se usa popup —y NO
+   * `signInWithRedirect`/`getRedirectResult`— porque el Firebase SDK v12 pierde
+   * el estado del redirect cuando el `authDomain` difiere del origen de la app
+   * con cookies de terceros bloqueadas; el popup devuelve el `UserCredential`
+   * directamente a esta instancia de `Auth`.
+   *
+   * Aplica `setCustomParameters({ hd })` con el dominio corporativo resuelto por
+   * entorno (`corporateHostedDomain`, sin hardcodear): `hd` filtra el selector de
+   * cuenta de Google al dominio de la empresa. El 2FA lo resuelve Google
+   * (2-Step Verification). Si el `hd` no esta resuelto, propaga un error de
+   * configuracion por el observable (fail-safe): no autentica con `hd` vacio ni
+   * con un default. El `hd` es cosmetico; la autorizacion de dominio real es
+   * server-side (POCA-004).
+   *
+   * @returns observable con el `UserCredential` resultante del popup de Google.
+   */
+  signInGoogle(): Observable<UserCredential> {
+    let auth: Auth;
+    let hostedDomain: string | undefined;
+    try {
+      auth = this.getFirebaseAuth();
+      hostedDomain = this.requireFirebaseConfig().corporateHostedDomain;
+      if (hostedDomain === undefined || hostedDomain === '') {
+        throw new ConfigurationError(
+          'El dominio corporativo (hd) no esta configurado para este entorno.',
+        );
+      }
+    } catch (error) {
+      return throwError(() => error);
+    }
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ hd: hostedDomain });
     return from(signInWithPopup(auth, provider));
   }
 

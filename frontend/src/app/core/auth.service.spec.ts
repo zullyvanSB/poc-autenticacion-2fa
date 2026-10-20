@@ -9,11 +9,17 @@ import { environment } from '../../environments/environment';
 jest.mock('firebase/app', () => ({
   initializeApp: jest.fn(() => ({})),
 }));
+// `GoogleAuthProvider` se mockea como clase: cada instancia expone un espia
+// `setCustomParameters` para verificar el `{ hd }` aplicado en `signInGoogle`.
+const googleSetCustomParameters = jest.fn();
 jest.mock('firebase/auth', () => ({
   getAuth: jest.fn(() => ({})),
   getMultiFactorResolver: jest.fn(),
   getRedirectResult: jest.fn(),
   multiFactor: jest.fn(),
+  GoogleAuthProvider: jest.fn().mockImplementation(() => ({
+    setCustomParameters: googleSetCustomParameters,
+  })),
   SAMLAuthProvider: jest.fn(),
   signInWithEmailAndPassword: jest.fn(),
   signInWithPopup: jest.fn(),
@@ -118,6 +124,107 @@ describe('AuthService', () => {
         expect(error).toBeInstanceOf(ConfigurationError);
         done();
       },
+    });
+  });
+
+  describe('signInGoogle (camino B — corporativo)', () => {
+    const corporateConfig = {
+      apiKey: 'k',
+      authDomain: 'd.firebaseapp.com',
+      projectId: 'p',
+      samlProviderId: 'saml.f5apm',
+      corporateHostedDomain: 'empresa.com',
+    } as const;
+
+    it('instancia GoogleAuthProvider, aplica setCustomParameters({ hd }) y usa signInWithPopup (FR-1..FR-5)', (done) => {
+      // Given: config corporativa resuelta y popup que resuelve con un credential.
+      (environment as { firebase: unknown }).firebase = { ...corporateConfig };
+      const fakeCredential = { user: { uid: 'u-corporativo' } };
+      const { GoogleAuthProvider, signInWithPopup, signInWithRedirect } =
+        jest.requireMock('firebase/auth') as {
+          GoogleAuthProvider: jest.Mock;
+          signInWithPopup: jest.Mock;
+          signInWithRedirect: jest.Mock;
+        };
+      signInWithPopup.mockResolvedValue(fakeCredential);
+
+      // When
+      service.signInGoogle().subscribe({
+        // Then: provider + setCustomParameters({ hd }) + popup (nunca redirect).
+        next: (credential) => {
+          expect(GoogleAuthProvider).toHaveBeenCalledTimes(1);
+          expect(googleSetCustomParameters).toHaveBeenCalledWith({ hd: 'empresa.com' });
+          expect(signInWithPopup).toHaveBeenCalledTimes(1);
+          expect(signInWithRedirect).not.toHaveBeenCalled();
+          expect(credential).toBe(fakeCredential);
+          done();
+        },
+        error: () => done.fail('no debia emitir error'),
+      });
+    });
+
+    it('propaga ConfigurationError y NO llama signInWithPopup si el hd no esta resuelto (FR-6, edge case)', (done) => {
+      // Given: config valida pero sin corporateHostedDomain (campos obligatorios OK).
+      (environment as { firebase: unknown }).firebase = {
+        apiKey: 'k',
+        authDomain: 'd.firebaseapp.com',
+        projectId: 'p',
+        samlProviderId: 'saml.f5apm',
+      };
+      const { signInWithPopup } = jest.requireMock('firebase/auth') as {
+        signInWithPopup: jest.Mock;
+      };
+
+      // When
+      service.signInGoogle().subscribe({
+        // Then: fail-safe — error de config por el observable, sin disparar popup.
+        next: () => done.fail('no debia emitir'),
+        error: (error: unknown) => {
+          expect(error).toBeInstanceOf(ConfigurationError);
+          expect(signInWithPopup).not.toHaveBeenCalled();
+          done();
+        },
+      });
+    });
+
+    it('propaga ConfigurationError si la config de Firebase no esta resuelta (R9.7)', (done) => {
+      // Given
+      (environment as { firebase: unknown }).firebase = null;
+      const { signInWithPopup } = jest.requireMock('firebase/auth') as {
+        signInWithPopup: jest.Mock;
+      };
+
+      // When
+      service.signInGoogle().subscribe({
+        // Then
+        next: () => done.fail('no debia emitir'),
+        error: (error: unknown) => {
+          expect(error).toBeInstanceOf(ConfigurationError);
+          expect(signInWithPopup).not.toHaveBeenCalled();
+          done();
+        },
+      });
+    });
+
+    it('reutiliza getFirebaseAuth(): no reinicializa el SDK en una segunda llamada', () => {
+      // Given: config corporativa resuelta; getAuth cuenta inicializaciones.
+      (environment as { firebase: unknown }).firebase = { ...corporateConfig };
+      const { getAuth, signInWithPopup } = jest.requireMock('firebase/auth') as {
+        getAuth: jest.Mock;
+        signInWithPopup: jest.Mock;
+      };
+      const { initializeApp } = jest.requireMock('firebase/app') as {
+        initializeApp: jest.Mock;
+      };
+      signInWithPopup.mockResolvedValue({ user: { uid: 'u' } });
+
+      // When: dos invocaciones consecutivas.
+      service.signInGoogle().subscribe({ error: () => undefined });
+      service.signInGoogle().subscribe({ error: () => undefined });
+
+      // Then: el SDK se inicializa una sola vez (instancia perezosa reutilizada).
+      expect(initializeApp).toHaveBeenCalledTimes(1);
+      expect(getAuth).toHaveBeenCalledTimes(1);
     });
   });
 });

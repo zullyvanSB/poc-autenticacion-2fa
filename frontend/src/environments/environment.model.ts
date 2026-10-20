@@ -25,6 +25,16 @@ export interface FirebaseWebConfig {
    * ese tenant (sign-in, MFA/TOTP y SAML quedan confinados al tenant).
    */
   readonly tenantId?: string;
+  /**
+   * Dominio corporativo (`hd`) del camino B (login con Google). Se aplica como
+   * `GoogleAuthProvider.setCustomParameters({ hd })` para filtrar el selector de
+   * cuenta de Google al dominio de la empresa. Es config web PUBLICA resuelta por
+   * entorno (como `samlProviderId`/`tenantId`), NO un secreto ni un control de
+   * seguridad: la autorizacion real de dominio es server-side. Opcional porque el
+   * valor por entorno lo fija POCA-008 y solo lo necesita el camino corporativo;
+   * su ausencia es un error de configuracion manejado (fail-safe), sin default.
+   */
+  readonly corporateHostedDomain?: string;
   readonly appId?: string;
   readonly storageBucket?: string;
   readonly messagingSenderId?: string;
