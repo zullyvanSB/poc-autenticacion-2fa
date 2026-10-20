@@ -55,6 +55,7 @@ __all__ = [
     "clamp_session_duration_seconds",
     "create_session_cookie",
     "derive_user_type",
+    "is_allowed_corporate_email",
     "revoke_session",
     "verify_id_token",
     "verify_session_cookie",
@@ -561,3 +562,46 @@ def derive_user_type(claims: dict[str, Any]) -> UserType:
     raise UnknownSignInProviderError(
         "El proveedor de ingreso del token no corresponde a una ruta conocida."
     )
+
+
+def is_allowed_corporate_email(
+    email: str | None, allowed_domains: list[str]
+) -> bool:
+    """Indica si el dominio del correo pertenece a la allowlist corporativa.
+
+    Regla de seguridad (camino B, POCA-004): la autorizacion corporativa se
+    ancla en el claim ``email`` del ID token verificado, nunca en el parametro
+    ``hd`` que provee el frontend (cosmetico y eludible). Extrae el dominio como
+    la porcion tras el ULTIMO ``@`` del correo, lo normaliza a minusculas y lo
+    compara por **match EXACTO** (igualdad completa del dominio) contra
+    ``allowed_domains`` (que POCA-001 entrega ya normalizada a minusculas). No
+    hay tratamiento de sufijo ni subdominio: ``sub.segurosbolivar.com`` y
+    ``evil-segurosbolivar.com`` NO coinciden con ``segurosbolivar.com``.
+
+    **Fail-safe deny** (R5.3, defensa en profundidad): devuelve ``False`` cuando
+    ``email`` es ``None``/no-``str``/vacio, no contiene ``@``, la parte de
+    dominio queda vacia (incluso tras recortar espacios), o ``allowed_domains``
+    esta vacia. La ausencia de un dominio extraible o de configuracion nunca
+    autoriza por defecto.
+
+    Funcion pura y determinista: no realiza E/S, no registra ni accede a estado;
+    para los mismos argumentos produce siempre el mismo resultado, de modo que
+    sea verificable de forma aislada (sin HTTP ni mocks del SDK).
+
+    :param email: claim ``email`` (top-level) del token verificado, o ``None``.
+    :param allowed_domains: allowlist de dominios normalizados a minusculas
+        (``get_corporate_allowed_domains`` de POCA-001); vacia ⇒ nadie autorizado.
+    :return: ``True`` solo si el dominio del ``email`` hace match exacto
+        (case-insensitive) con alguna entrada de ``allowed_domains``; ``False``
+        en cualquier otro caso (fail-safe deny).
+    """
+    if not isinstance(email, str) or not allowed_domains:
+        return False
+    # El dominio es la porcion tras el ULTIMO `@`: un `@` extra en la parte
+    # local no debe alterar el dominio real que se autoriza (anclaje en email).
+    if "@" not in email:
+        return False
+    domain = email.rsplit("@", 1)[1].strip().lower()
+    if not domain:
+        return False
+    return domain in allowed_domains

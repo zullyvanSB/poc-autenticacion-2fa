@@ -41,6 +41,7 @@ from auth.firebase_auth import (
     _SIGN_IN_PROVIDER_CLAIM,
     _TENANT_CLAIM,
     derive_user_type,
+    is_allowed_corporate_email,
     verify_id_token,
     verify_session_cookie,
 )
@@ -381,3 +382,176 @@ def test_verify_session_cookie_rejects_wrong_tenant_generically(
 
     # Then: el mensaje generico no revela que el motivo fue el tenant.
     assert str(exc_info.value) == "La sesion no es valida."
+
+
+# --------------------------------------------------------------------------- #
+# is_allowed_corporate_email — funcion pura de validacion de dominio (POCA-004)
+# --------------------------------------------------------------------------- #
+
+# Allowlist de prueba (ya normalizada a minusculas, como la entrega POCA-001).
+_ALLOWED_DOMAINS = ["segurosbolivar.com", "serviciosbolivar.com"]
+
+
+@pytest.mark.parametrize(
+    "email",
+    [
+        "user@segurosbolivar.com",
+        "user@serviciosbolivar.com",
+        "nombre.apellido@segurosbolivar.com",
+    ],
+)
+def test_is_allowed_corporate_email_accepts_allowed_domain(email: str) -> None:
+    """Given correo de dominio permitido, When se valida, Then True (FR-3)."""
+    # Given / When: se valida un correo cuyo dominio esta en la allowlist.
+    # Then: se autoriza.
+    assert is_allowed_corporate_email(email, _ALLOWED_DOMAINS) is True
+
+
+@pytest.mark.parametrize("email", ["user@gmail.com", "user@samtel.eu", "x@outlook.com"])
+def test_is_allowed_corporate_email_rejects_non_allowed_domain(email: str) -> None:
+    """Given correo de dominio no permitido, When se valida, Then False (AC-3)."""
+    # Given / When / Then: dominio fuera de la allowlist no se autoriza.
+    assert is_allowed_corporate_email(email, _ALLOWED_DOMAINS) is False
+
+
+@pytest.mark.parametrize(
+    "email",
+    [
+        "user@sub.segurosbolivar.com",  # subdominio
+        "user@evil-segurosbolivar.com",  # prefijo pegado
+        "user@segurosbolivar.com.attacker.com",  # sufijo pegado
+        "user@xsegurosbolivar.com",  # prefijo sin separador
+    ],
+)
+def test_is_allowed_corporate_email_match_is_exact(email: str) -> None:
+    """Given dominio que no iguala exacto, When se valida, Then False (FR-6, AC-4)."""
+    # Given / When / Then: solo el match exacto del dominio completo autoriza.
+    assert is_allowed_corporate_email(email, _ALLOWED_DOMAINS) is False
+
+
+@pytest.mark.parametrize(
+    "email",
+    [
+        "User@SegurosBolivar.COM",
+        "USER@SEGUROSBOLIVAR.COM",
+        "user@SegurosBolivar.com",
+    ],
+)
+def test_is_allowed_corporate_email_is_case_insensitive(email: str) -> None:
+    """Given dominio con casing variado, When se valida, Then True (case-insensitive)."""
+    # Given / When / Then: el dominio se normaliza a minusculas antes de comparar.
+    assert is_allowed_corporate_email(email, _ALLOWED_DOMAINS) is True
+
+
+@pytest.mark.parametrize(
+    "email",
+    [
+        None,  # ausente
+        "",  # vacio
+        "   ",  # solo espacios
+        "sin-arroba",  # sin @
+        "user@",  # dominio vacio
+        "@segurosbolivar.com",  # parte local vacia pero dominio presente -> se evalua el dominio
+        123,  # no-str
+        "user@ ",  # dominio en blanco tras recorte
+    ],
+)
+def test_is_allowed_corporate_email_fail_safe_deny(email: Any) -> None:
+    """Given correo ausente/no-str/sin dominio extraible, When se valida, Then False (fail-safe)."""
+    # Given / When / Then: entradas no validas NUNCA autorizan (fail-safe deny).
+    # Excepcion intencional: "@segurosbolivar.com" tiene dominio extraible valido;
+    # se cubre por separado en test_is_allowed_corporate_email_empty_local_part.
+    if email == "@segurosbolivar.com":
+        return
+    assert is_allowed_corporate_email(email, _ALLOWED_DOMAINS) is False
+
+
+def test_is_allowed_corporate_email_empty_local_part_uses_domain() -> None:
+    """Given correo con dominio valido pero parte local vacia, Then decide por el dominio.
+
+    El anclaje es el dominio tras el ultimo `@`; la parte local es irrelevante
+    para la decision de autorizacion.
+    """
+    assert is_allowed_corporate_email("@segurosbolivar.com", _ALLOWED_DOMAINS) is True
+
+
+def test_is_allowed_corporate_email_uses_last_at_segment() -> None:
+    """Given correo con multiples `@`, When se valida, Then el dominio es tras el ultimo `@`."""
+    # Given: correo con dos arrobas; el dominio real es la ultima porcion.
+    # Then: `@` extra en la parte local no altera el dominio permitido.
+    assert is_allowed_corporate_email("a@b@segurosbolivar.com", _ALLOWED_DOMAINS) is True
+    assert is_allowed_corporate_email("a@segurosbolivar.com@evil.com", _ALLOWED_DOMAINS) is False
+
+
+def test_is_allowed_corporate_email_empty_allowlist_denies_all() -> None:
+    """Given allowlist vacia, When se valida cualquier correo, Then False (fail-safe)."""
+    # Given / When / Then: sin dominios configurados, ningun correo se autoriza.
+    assert is_allowed_corporate_email("user@segurosbolivar.com", []) is False
+
+
+# --------------------------------------------------------------------------- #
+# is_allowed_corporate_email — propiedades (PBT con hypothesis)
+# --------------------------------------------------------------------------- #
+
+
+@given(
+    st.text(max_size=60) | st.none(),
+    st.lists(st.text(min_size=1, max_size=20), max_size=5),
+)
+def test_is_allowed_corporate_email_is_deterministic(
+    email: str | None, allowed: list[str]
+) -> None:
+    """Propiedad: mismos (email, allowlist) ⇒ mismo resultado (pureza/determinismo)."""
+    # Given / When / Then: dos evaluaciones con los mismos argumentos coinciden.
+    assert is_allowed_corporate_email(email, list(allowed)) == is_allowed_corporate_email(
+        email, list(allowed)
+    )
+
+
+@given(st.sampled_from(["segurosbolivar.com", "serviciosbolivar.com"]), st.text(min_size=1, max_size=10))
+def test_is_allowed_corporate_email_case_insensitive_property(
+    domain: str, local: str
+) -> None:
+    """Propiedad: variar el casing del dominio no cambia el resultado (case-insensitive)."""
+    # Given: un dominio permitido con casing arbitrario.
+    import random
+
+    swapped = "".join(
+        ch.upper() if random.random() < 0.5 else ch.lower() for ch in domain
+    )
+    local_clean = local.replace("@", "")
+    # Then: ambas variantes de casing clasifican igual (ambas permitidas).
+    assert is_allowed_corporate_email(
+        f"{local_clean}@{swapped}", _ALLOWED_DOMAINS
+    ) is True
+
+
+@given(st.text(min_size=1, max_size=20))
+def test_is_allowed_corporate_email_empty_allowlist_never_authorizes(
+    local: str,
+) -> None:
+    """Propiedad: con allowlist vacia, ningun correo se autoriza (fail-safe)."""
+    # Given / When / Then: allowlist vacia ⇒ siempre False.
+    local_clean = local.replace("@", "") or "u"
+    assert is_allowed_corporate_email(f"{local_clean}@segurosbolivar.com", []) is False
+
+
+@given(st.text(max_size=40).filter(lambda s: "@" not in s))
+def test_is_allowed_corporate_email_without_at_never_authorizes(email: str) -> None:
+    """Propiedad: un correo sin `@` nunca se autoriza (dominio no extraible)."""
+    # Given / When / Then: sin `@` no hay dominio ⇒ fail-safe deny.
+    assert is_allowed_corporate_email(email, _ALLOWED_DOMAINS) is False
+
+
+@given(
+    st.sampled_from(["segurosbolivar.com", "serviciosbolivar.com"]),
+    st.text(min_size=1, max_size=8).filter(lambda s: "@" not in s and "." not in s),
+)
+def test_is_allowed_corporate_email_subdomain_not_accepted(
+    base_domain: str, label: str
+) -> None:
+    """Propiedad: ningun `sub.d` ni `x-d` del dominio permitido se acepta (match exacto)."""
+    # Given: un subdominio y un prefijo pegado del dominio permitido.
+    # Then: match exacto ⇒ ninguno autoriza.
+    assert is_allowed_corporate_email(f"u@{label}.{base_domain}", _ALLOWED_DOMAINS) is False
+    assert is_allowed_corporate_email(f"u@{label}-{base_domain}", _ALLOWED_DOMAINS) is False

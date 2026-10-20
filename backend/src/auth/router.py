@@ -30,13 +30,19 @@ from __future__ import annotations
 from fastapi import APIRouter, Request, Response, status
 from fastapi.responses import JSONResponse
 
+from typing import Any
+
 from auth import firebase_auth
 from auth.firebase_auth import (
+    _FIREBASE_CLAIM,
+    _PROVIDER_GOOGLE,
+    _SIGN_IN_PROVIDER_CLAIM,
     FirebaseAuthError,
     InvalidIdTokenError,
     SessionCookieError,
     SessionRevocationError,
     create_session_cookie,
+    is_allowed_corporate_email,
     revoke_session,
     verify_id_token,
 )
@@ -44,6 +50,7 @@ from auth.models import RouteRequest, RouteResponse, SessionRequest
 from auth.routing import UnclassifiableIdentifierError, classify_route
 from common.api import CORRELATION_ID_HEADER
 from common.config import (
+    get_corporate_allowed_domains,
     get_session_cookie_max_age_seconds,
     get_session_cookie_name,
     get_session_cookie_samesite,
@@ -78,6 +85,32 @@ _RATE_LIMIT_SCOPE_SESSION = "auth.session"
 # Admin SDK expone el identificador del sujeto bajo las claves `uid` y `sub`.
 _UID_CLAIM = "uid"
 _SUBJECT_CLAIM = "sub"
+
+# Claim top-level `email` de un ID token de Google (a diferencia del SAML, que
+# trae el correo como atributo). Es el ancla de la autorizacion corporativa del
+# camino B: la validacion de dominio se apoya en este claim, nunca en el `hd`
+# que provee el frontend (cosmetico y eludible; POCA-004).
+_EMAIL_CLAIM = "email"
+
+
+def _is_google_provider(claims: dict[str, Any]) -> bool:
+    """Indica si los claims verificados corresponden al proveedor Google.
+
+    Lee ``firebase.sign_in_provider`` con la misma guarda defensiva que
+    `derive_user_type` (el objeto ``firebase`` puede faltar o no ser ``dict``) y
+    compara por igualdad EXACTA contra ``_PROVIDER_GOOGLE`` (``"google.com"``).
+    Un token de otro proveedor (``password``, ``saml.<id>``) o sin objeto
+    ``firebase`` resoluble devuelve ``False``, de modo que la validacion de
+    dominio del camino B no se aplique y el flujo existente quede intacto
+    (FR-2, FR-9; No-Objetivos).
+
+    :param claims: claims decodificados de un token ya verificado.
+    :return: ``True`` solo si el proveedor es exactamente ``"google.com"``.
+    """
+    firebase_claim = claims.get(_FIREBASE_CLAIM)
+    if not isinstance(firebase_claim, dict):
+        return False
+    return firebase_claim.get(_SIGN_IN_PROVIDER_CLAIM) == _PROVIDER_GOOGLE
 
 # Marcador neutro que usa el contexto cuando aun no se asocio un Correlation-ID.
 _UNSET_CORRELATION_ID = "-"
@@ -330,14 +363,34 @@ def create_session(request: Request, payload: SessionRequest) -> Response:
     # Paso 1: verificar el token. Cualquier fallo (invalido/expirado o SDK no
     # inicializable) deniega sin crear sesion (Property 4). El token nunca se
     # registra: la verificacion ya registra solo el tipo de error internamente.
+    # Se CAPTURAN los claims (antes se descartaban) para inspeccionar el
+    # proveedor y, en el camino B, el correo corporativo (POCA-004).
     try:
-        verify_id_token(payload.id_token)
+        claims = verify_id_token(payload.id_token)
     except (InvalidIdTokenError, FirebaseAuthError):
         _logger.warning(
             "session_rejected_invalid_token",
             extra={"resolved_correlation_id": correlation_id},
         )
         return _auth_failure_response(correlation_id)
+
+    # Paso 1b (camino B, POCA-004): validacion server-side de dominio corporativo.
+    # SOLO cuando el proveedor es exactamente google.com, la autorizacion se ancla
+    # en el claim `email` del token verificado (no en el `hd` del frontend). Si el
+    # dominio del correo no esta en la allowlist por entorno (o el correo falta o
+    # no es extraible, o la allowlist esta vacia), se deniega con el MISMO 401
+    # generico, sin `Set-Cookie` ni motivo, antes de crear la cookie (defensa en
+    # profundidad / BOLA; fail-safe deny). Los proveedores password/saml.<id> no
+    # pasan por aqui y conservan su flujo. No se registra el correo ni el dominio:
+    # solo el correlation_id y el evento (leakage prevention, R10.3/R10.4).
+    if _is_google_provider(claims):
+        email = claims.get(_EMAIL_CLAIM)
+        if not is_allowed_corporate_email(email, get_corporate_allowed_domains()):
+            _logger.warning(
+                "session_rejected_domain_not_allowed",
+                extra={"resolved_correlation_id": correlation_id},
+            )
+            return _auth_failure_response(correlation_id)
 
     # Paso 2: crear la session cookie solo tras verificar. La expiracion se
     # resuelve por configuracion y se acota al rango del SDK (R5.6).
