@@ -75,9 +75,9 @@ function resolveConfigString(value: unknown): string {
  * runtime. Devuelve `null` si falta alguno de los campos obligatorios
  * (`apiKey`, `authDomain`, `projectId`, `samlProviderId`): el `AuthService` NO
  * inicializa el SDK y expone un error de configuracion (R9.7), sin recurrir a
- * valores por defecto embebidos. El `tenantId` es opcional (campo adicional de
- * aislamiento en tenant dedicado): solo se incluye cuando esta resuelto y no
- * forma parte del null-check de campos obligatorios.
+ * valores por defecto embebidos. Los campos opcionales (`tenantId`,
+ * `corporateHostedDomain` del camino B, `appId`, etc.) solo se incluyen cuando
+ * estan resueltos y no forman parte del null-check de campos obligatorios.
  *
  * @returns el `FirebaseWebConfig` resuelto por entorno, o `null` si no existe.
  */
@@ -98,6 +98,7 @@ export function resolveFirebaseConfig(): FirebaseWebConfig | null {
   }
 
   const tenantId = resolveConfigString(firebase.tenantId);
+  const corporateHostedDomain = resolveConfigString(firebase.corporateHostedDomain);
   const appId = resolveConfigString(firebase.appId);
   const storageBucket = resolveConfigString(firebase.storageBucket);
   const messagingSenderId = resolveConfigString(firebase.messagingSenderId);
@@ -108,6 +109,7 @@ export function resolveFirebaseConfig(): FirebaseWebConfig | null {
     projectId,
     samlProviderId,
     ...(tenantId !== '' ? { tenantId } : {}),
+    ...(corporateHostedDomain !== '' ? { corporateHostedDomain } : {}),
     ...(appId !== '' ? { appId } : {}),
     ...(storageBucket !== '' ? { storageBucket } : {}),
     ...(messagingSenderId !== '' ? { messagingSenderId } : {}),

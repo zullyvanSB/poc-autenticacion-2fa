@@ -15,11 +15,12 @@ import {
 
 /**
  * Etiquetas visibles del tipo de usuario (R6.1): el contrato del backend expone
- * `cliente`/`interno`; la UI muestra "Cliente"/"Interno".
+ * `cliente`/`interno`/`corporativo`; la UI muestra "Cliente"/"Interno"/"Corporativo".
  */
 const USER_TYPE_LABELS: Readonly<Record<RouteType, string>> = {
   cliente: 'Cliente',
   interno: 'Interno',
+  corporativo: 'Corporativo',
 };
 
 /**
