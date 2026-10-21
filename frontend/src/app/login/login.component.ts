@@ -613,6 +613,10 @@ export class LoginComponent implements OnInit {
           this.startInternoRedirect();
           return;
         }
+        if (route.route_type === 'corporativo') {
+          this.startCorporativoGoogle();
+          return;
+        }
         // Ruta Cliente: continuar al paso de contrasena dentro del mismo
         // componente (sin navegar), conservando el identificador normalizado.
         this.identifierValue.set(normalizedIdentifier);
@@ -746,6 +750,32 @@ export class LoginComponent implements OnInit {
    */
   private startInternoRedirect(): void {
     this.auth.signInInterno().subscribe({
+      next: (credential: UserCredential) => {
+        this.processingRedirect.set(true);
+        this.establishSessionAndContinue(credential.user);
+      },
+      error: () => {
+        this.submitting.set(false);
+        this.backendError.set(GENERIC_LOGIN_ERROR);
+      },
+    });
+  }
+
+  /**
+   * Dispara la autenticacion corporativa con Google (camino B) mediante ventana
+   * emergente (`AuthService.signInGoogle()` -> `signInWithPopup`), espejo de
+   * `startInternoRedirect()`. El 2FA corporativo lo resuelve Google (2-Step
+   * Verification), NO el TOTP de Firebase: este flujo no pasa por las fases
+   * `password`/`enroll-totp`/`verify-totp`. Se usa popup —y NO
+   * `signInWithRedirect`/`getRedirectResult`/`completeRedirectSignIn`— porque el
+   * popup devuelve el `UserCredential` directamente aqui, igual que el camino A
+   * SAML ya migrado (el redirect pierde su estado entre dominios cuando el
+   * `authDomain` difiere del origen con cookies de terceros bloqueadas). En
+   * exito se establece la sesion server-side reutilizando el flujo agnostico de
+   * proveedor; ante fallo del popup se muestra el mensaje generico de ingreso.
+   */
+  private startCorporativoGoogle(): void {
+    this.auth.signInGoogle().subscribe({
       next: (credential: UserCredential) => {
         this.processingRedirect.set(true);
         this.establishSessionAndContinue(credential.user);
